@@ -1,0 +1,100 @@
+/* Card Components - Observatory Analytics Design System */
+
+/* KPI Card */
+.kpi {
+  padding: var(--space-lg) 14px;
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(var(--blur-sm));
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ember), transparent);
+  opacity: 0.4;
+}
+
+.kpi .label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.kpi .value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+/* Panel Card */
+.panel {
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.panel h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.panel h2 .al {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Chart Container */
+.chart-box {
+  width: 100%;
+  height: 300px;
+  position: relative;
+  border-radius: var(--space-sm);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.chart-box.sm {
+  height: 260px;
+}
+
+.chart-box.tall {
+  height: 320px;
+}
+
+.chart-box canvas {
+  width: 100% !important;
+  height: 100% !important;
+}

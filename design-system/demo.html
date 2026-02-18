@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design System Demo - Observatory Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="index.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  
+  <div class="shell">
+    <!-- Masthead -->
+    <header class="masthead">
+      <div>
+        <h1 class="heading-display">Observatory Analytics<br/>Design System</h1>
+        <div class="masthead-sub">
+          <span class="dot"></span>
+          <span>Component Library</span>
+          <span class="tag">v1.0.0</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn primary">Get Started</button>
+      </div>
+    </header>
+
+    <!-- Controls -->
+    <nav class="controls">
+      <button class="btn active">Overview</button>
+      <button class="btn">Components</button>
+      <button class="btn">Tokens</button>
+      <div class="ctrl-sep"></div>
+      <input class="input" type="text" placeholder="Search..." style="width: 200px"/>
+      <div class="ctrl-spacer"></div>
+      <span class="text-hint">Last updated: Today</span>
+    </nav>
+
+    <div class="status">Design system loaded successfully</div>
+
+    <!-- KPI Cards -->
+    <section class="kpis">
+      <article class="kpi">
+        <div class="label">Components</div>
+        <div class="value text-cyan">24</div>
+      </article>
+      <article class="kpi">
+        <div class="label">Tokens</div>
+        <div class="value text-ember">48</div>
+      </article>
+      <article class="kpi">
+        <div class="label">Utilities</div>
+        <div class="value text-violet">16</div>
+      </article>
+      <article class="kpi">
+        <div class="label">Status</div>
+        <div class="value text-gold">Stable</div>
+      </article>
+      <article class="kpi">
+        <div class="label">Version</div>
+        <div class="value">1.0.0</div>
+      </article>
+      <article class="kpi">
+        <div class="label">License</div>
+        <div class="value">MIT</div>
+      </article>
+    </section>
+
+    <!-- Hero Grid -->
+    <section class="grid-hero">
+      <article class="panel">
+        <h2>Buttons <span class="al"></span></h2>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; padding: 20px;">
+          <button class="btn">Default</button>
+          <button class="btn primary">Primary</button>
+          <button class="btn active">Active</button>
+          <button class="btn" disabled>Disabled</button>
+        </div>
+        
+        <h2 style="margin-top: 20px;">Typography <span class="al"></span></h2>
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <div class="text-value text-cyan">42,000</div>
+          <div class="text-body">Body text with regular weight</div>
+          <div class="text-mono">Monospace for code and data</div>
+          <div class="text-label">Label Text</div>
+          <div class="text-hint">Hint or helper text</div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Color Palette <span class="al"></span></h2>
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: var(--ember); border-radius: 6px;"></div>
+            <div>
+              <div class="text-mono" style="color: var(--ember);">Ember</div>
+              <div class="text-hint">#ff6b35</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: var(--cyan); border-radius: 6px;"></div>
+            <div>
+              <div class="text-mono" style="color: var(--cyan);">Cyan</div>
+              <div class="text-hint">#00d4aa</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: var(--violet); border-radius: 6px;"></div>
+            <div>
+              <div class="text-mono" style="color: var(--violet);">Violet</div>
+              <div class="text-hint">#a78bfa</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: var(--rose); border-radius: 6px;"></div>
+            <div>
+              <div class="text-mono" style="color: var(--rose);">Rose</div>
+              <div class="text-hint">#f472b6</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: var(--gold); border-radius: 6px;"></div>
+            <div>
+              <div class="text-mono" style="color: var(--gold);">Gold</div>
+              <div class="text-hint">#fbbf24</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Trio Grid -->
+    <section class="grid-trio">
+      <article class="panel">
+        <h2>Chart Example <span class="al"></span></h2>
+        <div class="chart-box">
+          <canvas id="demoChart"></canvas>
+        </div>
+        <div class="legend">
+          <span class="legend-item">
+            <span class="legend-swatch" style="background: #ff6b35;"></span>
+            <span>Series A (45)</span>
+          </span>
+          <span class="legend-item">
+            <span class="legend-swatch" style="background: #00d4aa;"></span>
+            <span>Series B (32)</span>
+          </span>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Tags & Badges <span class="al"></span></h2>
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <span class="tag">Default Tag</span>
+            <span class="tag">
+              <span class="dot"></span>
+              Active
+            </span>
+            <span class="tag">Long tag with ellipsis overflow handling</span>
+          </div>
+          
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;">
+            <span class="legend-item">
+              <span class="legend-swatch" style="background: var(--cyan);"></span>
+              <span>Legend Item</span>
+            </span>
+            <span class="legend-item">
+              <span class="legend-swatch" style="background: var(--ember);"></span>
+              <span>Another Item</span>
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Form Elements <span class="al"></span></h2>
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <input class="input" type="text" placeholder="Text input" style="width: 100%;"/>
+          <input class="input" type="number" placeholder="Number input" style="width: 100%;"/>
+          <div style="display: flex; gap: 8px;">
+            <input class="input" type="text" placeholder="Inline" style="flex: 1;"/>
+            <button class="btn">Submit</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Table -->
+    <section class="panel table-section">
+      <h2>Table Component <span class="al"></span></h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Usage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Button</td>
+              <td class="text-mono">Interactive</td>
+              <td class="text-cyan">Stable</td>
+              <td>Primary actions</td>
+            </tr>
+            <tr>
+              <td>KPI Card</td>
+              <td class="text-mono">Display</td>
+              <td class="text-cyan">Stable</td>
+              <td>Metrics display</td>
+            </tr>
+            <tr>
+              <td>Panel</td>
+              <td class="text-mono">Container</td>
+              <td class="text-cyan">Stable</td>
+              <td>Content grouping</td>
+            </tr>
+            <tr>
+              <td>Table</td>
+              <td class="text-mono">Data</td>
+              <td class="text-cyan">Stable</td>
+              <td>Tabular data</td>
+            </tr>
+            <tr>
+              <td>Chart</td>
+              <td class="text-mono">Visualization</td>
+              <td class="text-violet">Beta</td>
+              <td>Data visualization</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { applyChartTheme, chartColors } from './chart-theme.js';
+    import { entranceAnimation } from './animations.js';
+
+    // Apply chart theme
+    applyChartTheme(Chart);
+
+    // Create demo chart
+    const ctx = document.getElementById('demoChart');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Series A', 'Series B', 'Series C'],
+        datasets: [{
+          data: [45, 32, 23],
+          backgroundColor: [chartColors[0], chartColors[1], chartColors[2]],
+          borderColor: '#0e1117',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%'
+      }
+    });
+
+    // Run entrance animation
+    entranceAnimation();
+  </script>
+</body>
+</html>

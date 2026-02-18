@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Model Routing Audit — Observatory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --void:#08090c;--surface:#0e1117;--raised:#161b24;--glass:rgba(255,255,255,.04);
+  --border:rgba(255,255,255,.06);--border-hi:rgba(255,255,255,.12);
+  --text:#e8edf5;--text-dim:#6b7a8d;--text-muted:#3d4a5c;
+  --ember:#ff6b35;--ember-glow:rgba(255,107,53,.15);
+  --cyan:#00d4aa;--cyan-glow:rgba(0,212,170,.12);
+  --violet:#a78bfa;--violet-glow:rgba(167,139,250,.1);
+  --rose:#f472b6;--gold:#fbbf24;--sky:#38bdf8;
+}
+html{background:var(--void);color:var(--text);font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overflow-x:hidden;position:relative}
+body::before{
+  content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb-1{width:600px;height:600px;background:var(--ember-glow);top:-200px;right:-100px;opacity:.6}
+.orb-2{width:500px;height:500px;background:var(--cyan-glow);bottom:-150px;left:-100px;opacity:.5}
+.orb-3{width:400px;height:400px;background:var(--violet-glow);top:40%;left:50%;opacity:.3}
+.shell{position:relative;z-index:1;max-width:1520px;margin:0 auto;padding:24px 28px 60px}
+.masthead{display:grid;grid-template-columns:1fr auto;align-items:end;padding:40px 0 28px;border-bottom:1px solid var(--border);gap:20px}
+.masthead h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4.5vw,3.6rem);font-weight:400;letter-spacing:-.02em;line-height:1.05;background:linear-gradient(135deg,var(--text) 40%,var(--ember) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.masthead-sub{margin-top:8px;font-size:.85rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.masthead-sub .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);display:inline-block;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:4px;font-size:.72rem;background:var(--glass);border:1px solid var(--border);font-family:'JetBrains Mono',monospace;color:var(--text-dim);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{appearance:none;border:1px solid var(--border-hi);background:var(--raised);color:var(--text);border-radius:6px;padding:9px 14px;font-size:.82rem;font-family:'Outfit',sans-serif;font-weight:600;cursor:pointer;transition:all .2s ease;letter-spacing:.01em}
+.btn:hover{border-color:rgba(255,255,255,.2);background:#1c2230}
+.btn.active{border-color:var(--ember);color:var(--ember);background:var(--ember-glow)}
+.btn.primary{background:linear-gradient(135deg,var(--ember),#e85d2c);border-color:transparent;color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.4;cursor:wait}
+.controls{margin-top:20px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;border-radius:10px;background:var(--glass);border:1px solid var(--border);backdrop-filter:blur(12px)}
+.ctrl-sep{width:1px;height:24px;background:var(--border-hi);margin:0 4px}
+.ctrl-input{width:110px;border-radius:6px;border:1px solid var(--border-hi);padding:8px 10px;font-size:.82rem;background:var(--surface);color:var(--text);font-family:'JetBrains Mono',monospace;outline:none}
+.ctrl-input:focus{border-color:var(--ember);box-shadow:0 0 0 3px var(--ember-glow)}
+.ctrl-spacer{flex:1}
+.hint{font-size:.72rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.status{margin-top:8px;font-size:.78rem;color:var(--cyan);font-family:'JetBrains Mono',monospace;min-height:1.2em}
+.status.error{color:var(--rose)}
+.kpis{margin-top:20px;display:grid;gap:10px;grid-template-columns:repeat(6,1fr)}
+.kpi{padding:16px 14px;border-radius:10px;background:var(--glass);border:1px solid var(--border);backdrop-filter:blur(8px);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--ember),transparent);opacity:.4}
+.kpi .label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;font-weight:600}
+.kpi .value{font-size:1.4rem;font-weight:800;line-height:1.1;font-family:'JetBrains Mono',monospace;overflow-wrap:anywhere}
+.kpi .value.c1{color:var(--cyan)}.kpi .value.c2{color:var(--ember)}.kpi .value.c3{color:var(--violet)}
+.grid-hero{margin-top:16px;display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.grid-trio{margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.panel{border-radius:12px;padding:16px;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.02) 0%,transparent 40%);pointer-events:none}
+.panel h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel h2 .al{flex:1;height:1px;background:var(--border)}
+.chart-box{width:100%;height:300px;position:relative;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.015),transparent);border:1px solid var(--border);overflow:hidden}
+.chart-box.sm{height:260px}.chart-box.tall{height:320px}
+.chart-box canvas{width:100%!important;height:100%!important}
+.legend{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.legend-item{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:.72rem;background:var(--glass);border:1px solid var(--border);color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+.legend-swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.table-section{margin-top:12px}
+.table-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto;max-height:400px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border)}
+th{position:sticky;top:0;z-index:2;background:var(--raised);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:600}
+td{color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:.72rem}
+td.path{max-width:400px;word-break:break-all}
+tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
+.empty{display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.85rem;height:100%;text-align:center;padding:12px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid-hero,.grid-trio{grid-template-columns:1fr}.masthead{grid-template-columns:1fr}}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.shell{padding:16px}}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+<div class="shell">
+  <header class="masthead">
+    <div>
+      <h1>Codex Model Routing<br/>Observatory</h1>
+      <div class="masthead-sub">
+        <span class="dot"></span>
+        <span>Last sync: <strong id="lastRefresh">__LAST_REFRESH_UTC__</strong></span>
+        <span class="tag" title="__SOURCE_SESSIONS_DIR__">__SOURCE_SESSIONS_DIR__</span>
+      </div>
+    </div>
+    <div class="masthead-actions"><button id="refreshBtn" class="btn primary">↻ Refresh</button></div>
+  </header>
+  <nav class="controls">
+    <button class="btn preset active" data-preset="7d">7 d</button>
+    <button class="btn preset" data-preset="12h">12 h</button>
+    <button class="btn preset" data-preset="4h">4 h</button>
+    <button class="btn preset" data-preset="1h">1 h</button>
+    <div class="ctrl-sep"></div>
+    <input id="customDuration" class="ctrl-input" type="text" placeholder="e.g. 90m"/>
+    <button id="applyCustom" class="btn">Apply</button>
+    <div class="ctrl-spacer"></div>
+    <span class="hint" id="activeWindowHint">Window: 7d</span>
+    <span class="hint" id="activeBucketHint">Bucket: —</span>
+  </nav>
+  <div id="statusLine" class="status"></div>
+  <section class="kpis">
+    <article class="kpi"><div class="label">Events</div><div class="value c1" id="kpiEvents">0</div></article>
+    <article class="kpi"><div class="label">Models</div><div class="value c2" id="kpiModels">0</div></article>
+    <article class="kpi"><div class="label">Workspaces</div><div class="value c3" id="kpiWorkspaces">0</div></article>
+    <article class="kpi"><div class="label">Dominant Model</div><div class="value" id="kpiDominant">—</div></article>
+    <article class="kpi"><div class="label">Window Start</div><div class="value" id="kpiStart">—</div></article>
+    <article class="kpi"><div class="label">Window End</div><div class="value" id="kpiEnd">—</div></article>
+  </section>
+  <section class="grid-hero">
+    <article class="panel"><h2>Routing Timeline <span class="al"></span></h2><div class="chart-box"><canvas id="timeseriesCanvas"></canvas></div><div id="timeseriesLegend" class="legend"></div></article>
+    <article class="panel"><h2>Model Share <span class="al"></span></h2><div class="chart-box sm"><canvas id="modelShareCanvas"></canvas></div><div id="modelShareLegend" class="legend"></div></article>
+  </section>
+  <section class="grid-trio">
+    <article class="panel"><h2>Workspaces <span class="al"></span></h2><div class="chart-box tall"><canvas id="workspaceCanvas"></canvas></div></article>
+    <article class="panel"><h2>Sandbox Modes <span class="al"></span></h2><div class="chart-box tall"><canvas id="sandboxCanvas"></canvas></div><div id="sandboxLegend" class="legend"></div></article>
+    <article class="panel"><h2>Approval Policy <span class="al"></span></h2><div class="chart-box tall"><canvas id="approvalCanvas"></canvas></div><div id="approvalLegend" class="legend"></div></article>
+  </section>
+  <section class="panel table-section"><h2>Recent Events <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Model</th><th>Sandbox</th><th>Approval</th><th>Workspace</th><th>Session</th></tr></thead><tbody id="eventsTableBody"></tbody></table></div></section>
+</div>
+<script>
+(function(){
+const CSV_URL="__CSV_RELATIVE_PATH__";
+const COLORS=["#ff6b35","#00d4aa","#a78bfa","#f472b6","#fbbf24","#38bdf8","#34d399","#fb923c","#c084fc","#f87171"];
+const PRESETS={
+  "1h":{ms:36e5,min:6e4,max:3e5,pts:60},
+  "4h":{ms:144e5,min:12e4,max:9e5,pts:80},
+  "12h":{ms:432e5,min:3e5,max:18e5,pts:100},
+  "7d":{ms:6048e5,min:18e5,max:216e5,pts:120}
+};
+const INTERVALS=[6e4,12e4,3e5,6e5,9e5,18e5,36e5,72e5,144e5,216e5];
+const state={records:[],preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max};
+const $=id=>document.getElementById(id);
+
+function setStatus(m,err){$("statusLine").textContent=m||"";$("statusLine").classList.toggle("error",!!err)}
+function fmtLocal(ms){return new Date(ms).toLocaleString()}
+function fmtTime(ms,w){const d=new Date(ms);return w<=864e5?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})}
+function fmtDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+"m";const h=m/60;if(h<24)return(h%1?h.toFixed(1):h)+"h";const d=h/24;return(d%1?d.toFixed(1):d)+"d"}
+function clamp(ms){return Math.max(36e5,Math.min(2592e6,ms))}
+function parseDur(r){if(!r)return null;const m=r.trim().match(/^(\d+(?:\.\d+)?)\s*([mhd])$/i);if(!m)return null;const v=+m[1],u=m[2].toLowerCase();if(!isFinite(v)||v<=0)return null;return clamp(v*(u==="m"?6e4:u==="h"?36e5:864e5))}
+function pickInterval(w,p){const ok=INTERVALS.filter(v=>v>=p.min&&v<=p.max);const ideal=w/p.pts;return ok.find(v=>v>=ideal)||ok[ok.length-1]}
+
+function selectWindow(){
+  const anchor=state.records.length?state.records[state.records.length-1].ts:null;
+  if(!anchor)return{rows:[],startMs:null,endMs:null,bucketMs:state.bucketMs};
+  const end=anchor,start=end-state.windowMs;
+  const p=state.mode==="preset"?PRESETS[state.preset]:{min:6e4,max:216e5,pts:100};
+  const b=pickInterval(state.windowMs,p);state.bucketMs=b;
+  return{rows:state.records.filter(r=>r.ts>=start&&r.ts<=end),startMs:start,endMs:end,bucketMs:b};
+}
+
+function aggregate(rows,startMs,bMs){
+  const bMap=new Map,mC=new Map,wC=new Map,sC=new Map,aC=new Map;
+  for(const r of rows){
+    const bk=startMs+Math.floor((r.ts-startMs)/bMs)*bMs;
+    let b=bMap.get(bk);if(!b){b={ts:bk,total:0,byModel:new Map};bMap.set(bk,b)}
+    b.total++;b.byModel.set(r.model,(b.byModel.get(r.model)||0)+1);
+    mC.set(r.model,(mC.get(r.model)||0)+1);
+    wC.set(r.cwd,(wC.get(r.cwd)||0)+1);
+    sC.set(r.sandbox,(sC.get(r.sandbox)||0)+1);
+    aC.set(r.approval,(aC.get(r.approval)||0)+1);
+  }
+  const buckets=[...bMap.values()].filter(b=>b.total>0).sort((a,b)=>a.ts-b.ts);
+  const models=[...mC.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  return{buckets,models,mC,wC,sC,aC};
+}
+
+function sorted(map,limit,fn){
+  const r=[...map.entries()].sort((a,b)=>b[1]-a[1]);
+  return(limit?r.slice(0,limit):r).map(([l,v])=>({label:fn?fn(l):l,value:v}));
+}
+function basename(p){const s=p.split("/").filter(Boolean);return s.length?s[s.length-1]:p}
+function shorten(t,n){return t&&t.length>n?t.slice(0,n-3)+"...":t||""}
+
+// Chart.js global config for dark theme
+Chart.defaults.color="#6b7a8d";
+Chart.defaults.borderColor="rgba(255,255,255,.06)";
+Chart.defaults.font.family="'Outfit',sans-serif";
+Chart.defaults.font.size=11;
+Chart.defaults.plugins.legend.display=false;
+Chart.defaults.plugins.tooltip.backgroundColor="rgba(14,17,23,.95)";
+Chart.defaults.plugins.tooltip.borderColor="rgba(255,255,255,.1)";
+Chart.defaults.plugins.tooltip.borderWidth=1;
+Chart.defaults.plugins.tooltip.titleFont={family:"'JetBrains Mono',monospace",size:11};
+Chart.defaults.plugins.tooltip.bodyFont={family:"'JetBrains Mono',monospace",size:10};
+Chart.defaults.plugins.tooltip.padding=10;
+Chart.defaults.plugins.tooltip.cornerRadius=6;
+
+const charts={};
+function getOrCreate(id,type,cfg){
+  const canvas=document.getElementById(id);
+  if(charts[id]){
+    charts[id].destroy();
+    delete charts[id];
+  }
+  const existing=Chart.getChart(canvas);
+  if(existing){existing.destroy()}
+  charts[id]=new Chart(canvas,{type,...cfg});
+  return charts[id];
+}
+
+function renderLegend(el,items){
+  el.innerHTML="";
+  items.forEach(i=>{
+    const s=document.createElement("span");s.className="legend-item";
+    s.innerHTML=`<span class="legend-swatch" style="background:${i.color}"></span><span>${i.label}</span>`;
+    el.appendChild(s);
+  });
+}
+
+function drawTimeseries(buckets,models,windowMs){
+  const leg=$("timeseriesLegend");
+  if(!buckets.length){
+    getOrCreate("timeseriesCanvas","line",{data:{datasets:[]},options:{plugins:{title:{display:true,text:"No data in window",color:"#3d4a5c",font:{size:14}}}}});
+    leg.innerHTML="";return;
+  }
+  const labels=buckets.map(b=>fmtTime(b.ts,windowMs));
+  const datasets=models.map((m,i)=>({
+    label:m,fill:true,
+    data:buckets.map(b=>b.byModel.get(m)||0),
+    borderColor:COLORS[i%COLORS.length],
+    backgroundColor:COLORS[i%COLORS.length]+"22",
+    borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3
+  }));
+  getOrCreate("timeseriesCanvas","line",{
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+      scales:{
+        x:{
+          ticks:{maxTicksLimit:8},
+          grid:{color:"rgba(255,255,255,.04)"}},
+        y:{stacked:true,beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"},ticks:{precision:0}}
+      },
+      plugins:{tooltip:{mode:"index"}}
+    }
+  });
+  renderLegend(leg,models.map((m,i)=>({label:m,color:COLORS[i%COLORS.length]})));
+}
+
+function drawDoughnut(canvasId,legendId,pairs,emptyText){
+  const leg=legendId?$(legendId):null;
+  if(!pairs.length){
+    getOrCreate(canvasId,"doughnut",{data:{labels:[],datasets:[]},options:{plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
+    if(leg)leg.innerHTML="";return;
+  }
+  const colors=pairs.map((_,i)=>COLORS[i%COLORS.length]);
+  getOrCreate(canvasId,"doughnut",{
+    data:{labels:pairs.map(p=>p.label),datasets:[{data:pairs.map(p=>p.value),backgroundColor:colors,borderColor:"#0e1117",borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",plugins:{tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} events`}}}}
+  });
+  if(leg)renderLegend(leg,pairs.map((p,i)=>({label:`${p.label} (${p.value})`,color:colors[i]})));
+}
+
+function drawBars(canvasId,pairs,emptyText){
+  if(!pairs.length){
+    getOrCreate(canvasId,"bar",{data:{labels:[],datasets:[]},options:{indexAxis:"y",plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
+    return;
+  }
+  const colors=pairs.map((_,i)=>COLORS[i%COLORS.length]);
+  getOrCreate(canvasId,"bar",{
+    data:{labels:pairs.map(p=>p.label),datasets:[{data:pairs.map(p=>p.value),backgroundColor:colors.map(c=>c+"99"),borderColor:colors,borderWidth:1,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",scales:{x:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"},ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10}}}},plugins:{tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} events`}}}}
+  });
+}
+
+function renderTable(rows){
+  const recent=[...rows].sort((a,b)=>b.ts-a.ts).slice(0,120);
+  const tb=$("eventsTableBody");
+  if(!recent.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No events in window</td></tr>';return}
+  tb.innerHTML=recent.map(r=>{
+    const t=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");
+    return `<tr><td>${t(fmtLocal(r.ts))}</td><td>${t(r.model)}</td><td>${t(r.sandbox)}</td><td>${t(r.approval)}</td><td class="path" title="${t(r.cwd)}">${t(shorten(r.cwd,70))}</td><td class="path" title="${t(r.session)}">${t(shorten(r.session,80))}</td></tr>`;
+  }).join("");
+}
+
+function renderAll(){
+  try{
+    const sel=selectWindow();
+    $("activeWindowHint").textContent="Window: "+fmtDur(state.windowMs);
+    $("activeBucketHint").textContent="Bucket: "+fmtDur(sel.bucketMs);
+    if(!sel.rows.length){
+      $("kpiEvents").textContent="0";$("kpiModels").textContent="0";$("kpiWorkspaces").textContent="0";
+      $("kpiDominant").textContent="—";$("kpiStart").textContent="—";$("kpiEnd").textContent="—";
+      renderTable([]);
+      drawTimeseries([],[],state.windowMs);drawDoughnut("modelShareCanvas","modelShareLegend",[],"No data");
+      drawBars("workspaceCanvas",[],"No data");drawDoughnut("sandboxCanvas","sandboxLegend",[],"No data");
+      drawDoughnut("approvalCanvas","approvalLegend",[],"No data");
+      return;
+    }
+    const a=aggregate(sel.rows,sel.startMs,sel.bucketMs);
+    $("kpiEvents").textContent=sel.rows.length;
+    $("kpiModels").textContent=a.mC.size;
+    $("kpiWorkspaces").textContent=a.wC.size;
+    const top=sorted(a.mC,1)[0];
+    $("kpiDominant").textContent=top?top.label+" ("+top.value+")":"—";
+    $("kpiStart").textContent=sel.startMs?fmtLocal(sel.startMs):"—";
+    $("kpiEnd").textContent=sel.endMs?fmtLocal(sel.endMs):"—";
+    renderTable(sel.rows);
+    drawTimeseries(a.buckets,a.models,state.windowMs);
+    drawDoughnut("modelShareCanvas","modelShareLegend",sorted(a.mC),"No data");
+    drawBars("workspaceCanvas",sorted(a.wC,9,basename),"No data");
+    drawDoughnut("sandboxCanvas","sandboxLegend",sorted(a.sC),"No data");
+    drawDoughnut("approvalCanvas","approvalLegend",sorted(a.aC),"No data");
+  }catch(e){
+    setStatus("Render error: "+String(e),true);
+  }
+}
+
+function parseCsv(text){
+  const rows=[],out=[];let field="",row=[],inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i],n=text[i+1];
+    if(c==='"'){if(inQ&&n==='"'){field+='"';i++}else inQ=!inQ;continue}
+    if(!inQ&&c===","){row.push(field);field="";continue}
+    if(!inQ&&(c==="\n"||c==="\r")){if(c==="\r"&&n==="\n")i++;row.push(field);rows.push(row);row=[];field="";continue}
+    field+=c;
+  }
+  if(field||row.length){row.push(field);rows.push(row)}
+  if(!rows.length)return[];
+  const h=rows[0],data=rows.slice(1);
+  for(const v of data){
+    if(!v.length||v.every(x=>x===""))continue;
+    const o={};h.forEach((k,i)=>o[k]=v[i]||"");
+    const ep=+o.timestamp_epoch_ms;if(!isFinite(ep))continue;
+    out.push({ts:ep,model:o.model||"unknown",cwd:o.cwd||"unknown",sandbox:o.sandbox_mode||"unknown",approval:o.approval_policy||"unknown",session:o.session_file||"unknown"});
+  }
+  out.sort((a,b)=>a.ts-b.ts);return out;
+}
+
+async function loadCsv(msg=true){
+  try{
+    const r=await fetch(CSV_URL+"?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)throw new Error("CSV load failed ("+r.status+")");
+    state.records=parseCsv(await r.text());
+    if(msg)setStatus("Loaded "+state.records.length+" events");
+    renderAll();
+  }catch(e){setStatus(String(e),true)}
+}
+
+async function refresh(){
+  $("refreshBtn").disabled=true;setStatus("Refreshing…");
+  try{
+    const r=await fetch("/refresh",{method:"POST"});const j=await r.json();
+    if(!r.ok||j.status!=="ok")throw new Error(j.message||"Refresh failed");
+    $("lastRefresh").textContent=j.generated_at_utc||new Date().toISOString();
+    setStatus("Refresh done — "+j.rows_written+" rows");await loadCsv(false);
+  }catch(e){setStatus(String(e),true)}finally{$("refreshBtn").disabled=false}
+}
+
+function bind(){
+  document.querySelectorAll(".preset").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.preset;if(!PRESETS[k])return;
+    state.mode="preset";state.preset=k;state.windowMs=PRESETS[k].ms;markPreset();renderAll();
+  }));
+  $("applyCustom").addEventListener("click",()=>{
+    const ms=parseDur($("customDuration").value);
+    if(!ms){setStatus("Invalid duration — use 90m, 2h, 3d",true);return}
+    state.mode="custom";state.windowMs=ms;markPreset();setStatus("Custom: "+fmtDur(ms));renderAll();
+  });
+  $("customDuration").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("applyCustom").click()}});
+  $("refreshBtn").addEventListener("click",refresh);
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,150)});
+}
+
+function markPreset(){
+  document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("active",state.mode==="preset"&&b.dataset.preset===state.preset));
+}
+
+function entrance(){
+  gsap.from(".masthead",{y:-30,opacity:0,duration:.8,ease:"power3.out"});
+  gsap.from(".controls",{y:20,opacity:0,duration:.6,delay:.2,ease:"power3.out"});
+  gsap.from(".kpi",{y:30,opacity:0,duration:.5,stagger:.07,delay:.3,ease:"power3.out"});
+  gsap.from(".panel",{y:40,opacity:0,duration:.6,stagger:.1,delay:.5,ease:"power3.out"});
+  gsap.from(".table-section",{y:40,opacity:0,duration:.6,delay:.9,ease:"power3.out"});
+}
+
+function init(){
+  const lr=$("lastRefresh");
+  if(!lr.textContent||lr.textContent.includes("__LAST_REFRESH"))lr.textContent="awaiting sync";
+  bind();markPreset();entrance();loadCsv();
+}
+init();
+})();
+</script>
+</body>
+</html>

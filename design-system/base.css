@@ -1,0 +1,89 @@
+/* Base Styles - Observatory Analytics Design System */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Noise Texture Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Ambient Orbs */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(var(--blur-lg));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.orb-1 {
+  width: 600px;
+  height: 600px;
+  background: var(--ember-glow);
+  top: -200px;
+  right: -100px;
+  opacity: 0.6;
+}
+
+.orb-2 {
+  width: 500px;
+  height: 500px;
+  background: var(--cyan-glow);
+  bottom: -150px;
+  left: -100px;
+  opacity: 0.5;
+}
+
+.orb-3 {
+  width: 400px;
+  height: 400px;
+  background: var(--violet-glow);
+  top: 40%;
+  left: 50%;
+  opacity: 0.3;
+}
+
+/* Container */
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-2xl) 60px;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .shell {
+    padding: var(--space-lg);
+  }
+}

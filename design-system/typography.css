@@ -1,0 +1,60 @@
+/* Typography - Observatory Analytics Design System */
+
+/* Display Heading */
+.heading-display {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.5vw, 3.6rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  background: linear-gradient(135deg, var(--text) 40%, var(--ember) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Body Text */
+.text-body {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* Monospace Text */
+.text-mono {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+/* Label Text */
+.text-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Hint Text */
+.text-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Value Text (Large Numbers) */
+.text-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-family: var(--font-mono);
+}
+
+/* Color Variants */
+.text-cyan { color: var(--cyan); }
+.text-ember { color: var(--ember); }
+.text-violet { color: var(--violet); }
+.text-rose { color: var(--rose); }
+.text-gold { color: var(--gold); }
+.text-sky { color: var(--sky); }
