@@ -9,12 +9,14 @@ from model_audit_mini_app import model_audit_local_app as app_module
 from model_audit_mini_app.metrics_audit import build_usage_audit_report
 from model_audit_mini_app.model_audit_local_app import (
     AUDIT_JSON_NAME,
+    OPPORTUNITIES_JSON_NAME,
     SUMMARY_JSON_NAME,
     AuditAppContext,
     CSV_HEADERS,
     DATA_CATALOG_NAME,
     DATA_DIR_NAME,
     DATASET_SPECS,
+    build_optimization_report,
     extract_event_rows,
     load_thread_title_map,
     parse_timestamp,
@@ -369,6 +371,12 @@ def test_refresh_writes_audit_json(tmp_path: Path) -> None:
     assert summary_payload["totals"]["total_tokens"] == 55
     assert summary_payload["audit_status"] == "pass"
 
+    opportunities_path = reports / OPPORTUNITIES_JSON_NAME
+    assert opportunities_path.exists()
+    opportunities_payload = json.loads(opportunities_path.read_text(encoding="utf-8"))
+    assert opportunities_payload["status"] == "ok"
+    assert "summary" in opportunities_payload
+
     data_dir = reports / DATA_DIR_NAME
     assert data_dir.exists()
     for spec in DATASET_SPECS.values():
@@ -524,8 +532,96 @@ def test_ensure_data_rebuilds_missing_summary_artifact(tmp_path: Path) -> None:
     app_context.refresh_csv()
 
     summary_path = reports / SUMMARY_JSON_NAME
+    opportunities_path = reports / OPPORTUNITIES_JSON_NAME
     summary_path.unlink()
+    opportunities_path.unlink()
     assert not summary_path.exists()
+    assert not opportunities_path.exists()
 
     app_context.ensure_data()
     assert summary_path.exists()
+    assert opportunities_path.exists()
+
+
+def test_build_optimization_report_flags_repeat_query_waste(tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    log_file = sessions / "repeat.jsonl"
+    log_file.write_text(
+        "\n".join(
+            [
+                '{"type":"session_meta","timestamp":"2026-02-17T00:00:00Z","payload":{"id":"thread-repeat"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T00:00:01Z","payload":{"type":"user_message","message":"Draft migration plan for service 1001"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T00:00:02Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":210,"output_tokens":50,"total_tokens":260}}}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T00:00:03Z","payload":{"type":"user_message","message":"Draft migration plan for service 1002"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T00:00:04Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":190,"output_tokens":50,"total_tokens":240}}}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T00:00:05Z","payload":{"type":"user_message","message":"Draft migration plan for service 1003"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T00:00:06Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":170,"output_tokens":50,"total_tokens":220}}}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows = extract_event_rows(sessions)
+    report = build_optimization_report(rows, generated_at_utc="2026-02-17T00:05:00Z")
+
+    assert report["status"] == "ok"
+    opportunity = next(item for item in report["opportunities"] if item["id"] == "repeat_query_waste")
+    assert opportunity["estimated_token_savings"] == 460
+    assert opportunity["confidence"] == "high"
+    assert opportunity["evidence"]["top_signatures"][0]["occurrences"] == 3
+
+
+def test_build_optimization_report_flags_context_bloat_threads(tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    log_file = sessions / "bloat.jsonl"
+    events = [
+        json.dumps(
+            {
+                "type": "session_meta",
+                "timestamp": "2026-02-17T00:00:00Z",
+                "payload": {"id": "thread-bloat"},
+            }
+        )
+    ]
+    inputs = [120, 180, 260, 380, 560, 820, 1180, 1680]
+    for idx, input_tokens in enumerate(inputs, start=1):
+        base_second = idx * 2
+        events.append(
+            json.dumps(
+                {
+                    "type": "event_msg",
+                    "timestamp": f"2026-02-17T00:00:{base_second:02d}Z",
+                    "payload": {"type": "user_message", "message": f"analysis step {idx}"},
+                }
+            )
+        )
+        total_tokens = input_tokens + 40
+        events.append(
+            json.dumps(
+                {
+                    "type": "event_msg",
+                    "timestamp": f"2026-02-17T00:00:{base_second + 1:02d}Z",
+                    "payload": {
+                        "type": "token_count",
+                        "info": {
+                            "last_token_usage": {
+                                "input_tokens": input_tokens,
+                                "output_tokens": 40,
+                                "total_tokens": total_tokens,
+                            }
+                        },
+                    },
+                }
+            )
+        )
+    log_file.write_text("\n".join(events), encoding="utf-8")
+
+    rows = extract_event_rows(sessions)
+    report = build_optimization_report(rows, generated_at_utc="2026-02-17T00:05:00Z")
+
+    assert report["status"] == "ok"
+    opportunity = next(item for item in report["opportunities"] if item["id"] == "context_bloat_threads")
+    assert opportunity["estimated_token_savings"] > 0
+    assert opportunity["evidence"]["thread_count_flagged"] >= 1

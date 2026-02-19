@@ -196,6 +196,7 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
       <article class="kpi"><div class="label">Most Expensive Workspace</div><div class="value" id="uKpiTopWorkspace">—</div></article>
       <article class="kpi"><div class="label">Most Expensive Thread</div><div class="value" id="uKpiTopThread">—</div></article>
       <article class="kpi"><div class="label">Most Expensive Query</div><div class="value" id="uKpiTopQuery">—</div></article>
+      <article class="kpi"><div class="label">Optimization Potential</div><div class="value" id="uKpiOptPotential">0</div></article>
     </section>
 
     <section class="grid-hero">
@@ -231,6 +232,26 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
     </section>
 
     <section class="panel table-section"><h2>Context Bloat Slope Leaderboard <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Thread</th><th>Slope</th><th>Latest Rolling Input</th><th>Queries</th></tr></thead><tbody id="contextBloatBody"></tbody></table></div></section>
+
+    <section class="panel table-section">
+      <h2>Optimization Coach <span class="al"></span></h2>
+      <div id="opportunitiesSummary" class="hint" style="margin-bottom:10px">No optimization opportunities detected yet.</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th>Opportunity</th>
+              <th>Potential Savings</th>
+              <th>Confidence</th>
+              <th>Evidence</th>
+              <th>Recommended Action</th>
+            </tr>
+          </thead>
+          <tbody id="opportunitiesBody"></tbody>
+        </table>
+      </div>
+    </section>
     </div>
 
     <div id="usageAuditPaneSnapshots" class="audit-pane">
@@ -274,6 +295,7 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
 (function(){
 const DATA_BASE_URL="__DATA_BASE_PATH__";
 const AUDIT_URL="__AUDIT_JSON_RELATIVE_PATH__";
+const OPPORTUNITIES_URL="__OPPORTUNITIES_JSON_RELATIVE_PATH__";
 const CATALOG_URL=DATA_BASE_URL+"/catalog.json";
 const DATASET_URLS={
   routing:DATA_BASE_URL+"/routing_context.csv",
@@ -289,7 +311,7 @@ const PRESETS={
   "7d":{ms:6048e5,min:18e5,max:216e5,pts:120}
 };
 const INTERVALS=[6e4,12e4,3e5,6e5,9e5,18e5,36e5,72e5,144e5,216e5];
-const state={audit:null,catalog:null,preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",usageAuditTab:"usage",selection:null,anchorMs:null,loadId:0};
+const state={audit:null,opportunities:null,catalog:null,preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",usageAuditTab:"usage",selection:null,anchorMs:null,loadId:0};
 const charts={};
 const $=id=>document.getElementById(id);
 
@@ -634,6 +656,27 @@ function regressionSlope(values){
   return den?num/den:0;
 }
 
+function opportunityEvidenceText(opportunity){
+  const ev=(opportunity&&opportunity.evidence)?opportunity.evidence:{};
+  if(Array.isArray(ev.top_signatures)&&ev.top_signatures.length){
+    const top=ev.top_signatures[0];
+    return `${fmtNum(top.occurrences||0)} repeats · ${fmtNum(top.avoidable_tokens||0)} avoidable`;
+  }
+  if(Array.isArray(ev.top_threads)&&ev.top_threads.length){
+    const top=ev.top_threads[0];
+    const name=threadDisplay(top.thread_label||"",top.thread_id||"unknown");
+    return `${name} · slope ${Number(top.slope||0).toFixed(2)}`;
+  }
+  if(Array.isArray(ev.top_spikes)&&ev.top_spikes.length){
+    const top=ev.top_spikes[0];
+    return `${fmtNum(top.total_tokens||0)} tokens · z ${Number(top.z_score||0).toFixed(2)}`;
+  }
+  if(typeof ev.repeat_signature_count==="number")return `${fmtNum(ev.repeat_signature_count)} repeat signatures`;
+  if(typeof ev.thread_count_flagged==="number")return `${fmtNum(ev.thread_count_flagged)} flagged threads`;
+  if(typeof ev.spike_count==="number")return `${fmtNum(ev.spike_count)} spike windows`;
+  return "See optimization report details";
+}
+
 function setUsageAuditBanner(status,text){
   const el=$("usageAuditStatus");
   el.classList.remove("pass","fail","info","active");
@@ -676,7 +719,7 @@ function renderUsage(sel){
   usageWarn.classList.toggle("active",!usageAvailable);
 
   if(!usageAvailable){
-    ["uKpiTotal","uKpiInput","uKpiOutput","uKpiCached","uKpiReasoning","uKpiAvgPerQuery","uKpiReconDelta"].forEach(id=>$(id).textContent="0");
+    ["uKpiTotal","uKpiInput","uKpiOutput","uKpiCached","uKpiReasoning","uKpiAvgPerQuery","uKpiReconDelta","uKpiOptPotential"].forEach(id=>$(id).textContent="0");
     $("uKpiCacheHit").textContent="0%";
     $("uKpiOutInRatio").textContent="0%";
     $("uKpiTopWorkspace").textContent="—";
@@ -704,6 +747,8 @@ function renderUsage(sel){
     drawBars("toolOverheadCanvas",[],"Usage telemetry unavailable");
     tableRows("topWorkspacesBody",[],6);tableRows("topThreadsBody",[],6);tableRows("topQueriesBody",[],8);
     tableRows("spikeBody",[],6);tableRows("repeatsBody",[],7);tableRows("toolOverheadBody",[],7);tableRows("contextBloatBody",[],4);
+    tableRows("opportunitiesBody",[],6);
+    $("opportunitiesSummary").textContent="Optimization feed unavailable until usage telemetry is regenerated.";
     $("usageSnapshotCount").textContent="0";
     $("usageSnapshotSummary").textContent="Usage telemetry unavailable in this window.";
     tableRows("nonComparableSnapshotsBody",[],8);
@@ -718,7 +763,7 @@ function renderUsage(sel){
   const threadName=id=>threadDisplay(threadLabelById.get(id)||"",id);
 
   if(!tokenRows.length){
-    ["uKpiTotal","uKpiInput","uKpiOutput","uKpiCached","uKpiReasoning","uKpiAvgPerQuery","uKpiReconDelta"].forEach(id=>$(id).textContent="0");
+    ["uKpiTotal","uKpiInput","uKpiOutput","uKpiCached","uKpiReasoning","uKpiAvgPerQuery","uKpiReconDelta","uKpiOptPotential"].forEach(id=>$(id).textContent="0");
     $("uKpiCacheHit").textContent="0%";
     $("uKpiOutInRatio").textContent="0%";
     $("uKpiTopWorkspace").textContent="—";
@@ -746,6 +791,8 @@ function renderUsage(sel){
     drawBars("toolOverheadCanvas",[],"No tool windows in window");
     tableRows("topWorkspacesBody",[],6);tableRows("topThreadsBody",[],6);tableRows("topQueriesBody",[],8);
     tableRows("spikeBody",[],6);tableRows("repeatsBody",[],7);tableRows("toolOverheadBody",[],7);tableRows("contextBloatBody",[],4);
+    tableRows("opportunitiesBody",[],6);
+    $("opportunitiesSummary").textContent="No token activity in this window, so optimization opportunities cannot be ranked.";
     $("usageSnapshotCount").textContent="0";
     $("usageSnapshotSummary").textContent="No token events in the active window.";
     tableRows("nonComparableSnapshotsBody",[],8);
@@ -824,6 +871,25 @@ function renderUsage(sel){
   }else{
     $("uKpiTopQuery").textContent="—";
   }
+
+  const opportunitiesPayload=(state.opportunities&&Array.isArray(state.opportunities.opportunities))?state.opportunities:null;
+  const opportunities=opportunitiesPayload?opportunitiesPayload.opportunities:[];
+  const opportunitySummary=(opportunitiesPayload&&opportunitiesPayload.summary)?opportunitiesPayload.summary:{};
+  const opportunitySavings=Number(opportunitySummary.estimated_total_token_savings||0);
+  $("uKpiOptPotential").textContent=fmtNum(opportunitySavings);
+  if(opportunities.length){
+    $("opportunitiesSummary").textContent=`${fmtNum(opportunities.length)} prioritized opportunities · estimated savings ${fmtNum(opportunitySavings)} tokens over the retained dataset window.`;
+    tableRows("opportunitiesBody",opportunities.slice(0,12).map(item=>{
+      const actions=Array.isArray(item.actions)?item.actions:[];
+      const firstAction=actions.length?actions[0]:"Review optimization report and apply the highest-impact change.";
+      const severity=String(item.severity||"low").toUpperCase();
+      return `<tr><td>${fmtNum(item.priority||0)}</td><td class="path" title="${esc(item.title||"")}">${esc(item.title||"")}</td><td>${fmtNum(item.estimated_token_savings||0)}</td><td>${esc(String(item.confidence||"unknown"))}</td><td class="path" title="${esc(opportunityEvidenceText(item))}">${esc(opportunityEvidenceText(item))}</td><td class="path" title="${esc(firstAction)}"><span class="badge">${esc(severity)}</span> ${esc(shorten(firstAction,96))}</td></tr>`;
+    }),6);
+  }else{
+    $("opportunitiesSummary").textContent="No high-confidence optimization opportunities detected in the retained dataset.";
+    tableRows("opportunitiesBody",[],6);
+  }
+
   if(recon.rowsWithBoth===0){
     setUsageAuditBanner(
       "info",
@@ -1023,9 +1089,10 @@ async function loadWindowData(msg=true,refreshMeta=false){
     const loadId=++state.loadId;
     const stamp=Date.now();
     if(refreshMeta||!state.catalog){
-      const [catalogResp,auditResp]=await Promise.all([
+      const [catalogResp,auditResp,opportunitiesResp]=await Promise.all([
         fetch(CATALOG_URL+"?t="+stamp,{cache:"no-store"}),
-        fetch(AUDIT_URL+"?t="+stamp,{cache:"no-store"})
+        fetch(AUDIT_URL+"?t="+stamp,{cache:"no-store"}),
+        fetch(OPPORTUNITIES_URL+"?t="+stamp,{cache:"no-store"})
       ]);
       if(!catalogResp.ok)throw new Error("Catalog load failed ("+catalogResp.status+")");
       try{state.catalog=await catalogResp.json()}catch(_err){state.catalog=null}
@@ -1034,6 +1101,11 @@ async function loadWindowData(msg=true,refreshMeta=false){
         try{state.audit=await auditResp.json()}catch(_err){state.audit=null}
       }else{
         state.audit=null;
+      }
+      if(opportunitiesResp.ok){
+        try{state.opportunities=await opportunitiesResp.json()}catch(_err){state.opportunities=null}
+      }else{
+        state.opportunities=null;
       }
     }
 

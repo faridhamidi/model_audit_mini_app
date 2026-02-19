@@ -37,6 +37,7 @@ Hit the **Refresh** button in the dashboard to re-parse your latest session logs
 
 - `/audit.json` - token integrity checks and reconciliation report.
 - `/summary.json` - pre-aggregated rollups by model, workspace, thread, and tool.
+- `/opportunities.json` - prioritized optimization opportunities with estimated token savings and next actions.
 - `/data/catalog.json` - dataset metadata and generated CSV inventory.
 
 ---
@@ -49,6 +50,7 @@ Hit the **Refresh** button in the dashboard to re-parse your latest session logs
 | Queries | Your messages and the queries sent to the model |
 | Token Usage | Input/output/cached token counts per query |
 | Tool Calls | Which tools were invoked and how long they took |
+| Optimization Coach | Ranked opportunities to cut token waste with estimated savings |
 
 ### Audit Checks
 
@@ -74,6 +76,7 @@ model_audit_mini_app/
 ├── metrics_audit.py             # Audit checks and reconciliation logic
 ├── model_audit_dashboard.html   # Frontend dashboard (served at /)
 ├── model_audit_summary.json     # Generated rollup summary API artifact
+├── model_audit_opportunities.json # Generated optimization opportunities artifact
 ├── run_model_audit_dashboard.sh # Shell launcher
 ├── test_model_audit_local_app.py
 └── data/                        # Generated at runtime, not committed
