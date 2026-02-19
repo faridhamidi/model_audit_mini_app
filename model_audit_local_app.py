@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone local mini app for Codex model routing audit."""
+"""Standalone local mini app for Codex model routing and usage audit."""
 
 from __future__ import annotations
 
@@ -20,25 +20,64 @@ from urllib.parse import urlparse
 CSV_HEADERS = [
     "timestamp_utc",
     "timestamp_epoch_ms",
+    "event_type",
+    "thread_id",
+    "thread_label",
+    "conversation_id",
+    "query_id",
+    "query_index",
     "model",
     "cwd",
     "sandbox_mode",
     "approval_policy",
     "session_file",
+    "message_role",
+    "message_text",
+    "query_text",
+    "tool_name",
+    "tool_call_id",
+    "tool_start_epoch_ms",
+    "tool_end_epoch_ms",
+    "tool_duration_ms",
+    "input_tokens",
+    "output_tokens",
+    "cached_input_tokens",
+    "reasoning_output_tokens",
+    "total_tokens",
 ]
 
 HTML_NAME = "model_audit_dashboard.html"
 CSV_NAME = "model_audit_data.csv"
+CODEX_GLOBAL_STATE_PATH = Path.home() / ".codex" / ".codex-global-state.json"
 
 
 @dataclass
-class TurnRow:
+class AuditEventRow:
     timestamp: datetime
-    model: str
-    cwd: str
-    sandbox_mode: str
-    approval_policy: str
-    session_file: str
+    event_type: str
+    thread_id: str
+    thread_label: str | None = None
+    conversation_id: str | None = None
+    query_id: str | None = None
+    query_index: int | None = None
+    model: str = "unknown"
+    cwd: str = "unknown"
+    sandbox_mode: str = "unknown"
+    approval_policy: str = "unknown"
+    session_file: str = ""
+    message_role: str | None = None
+    message_text: str | None = None
+    query_text: str | None = None
+    tool_name: str | None = None
+    tool_call_id: str | None = None
+    tool_start_epoch_ms: int | None = None
+    tool_end_epoch_ms: int | None = None
+    tool_duration_ms: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cached_input_tokens: int | None = None
+    reasoning_output_tokens: int | None = None
+    total_tokens: int | None = None
 
 
 def parse_timestamp(value: str | None) -> datetime | None:
@@ -64,12 +103,147 @@ def normalize_sandbox_mode(policy: Any) -> str:
     return "unknown"
 
 
-def extract_turn_rows(sessions_dir: Path) -> list[TurnRow]:
-    rows: list[TurnRow] = []
+def coerce_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            if "." in text:
+                return int(float(text))
+            return int(text)
+        except ValueError:
+            return None
+    return None
+
+
+def extract_response_message_text(payload: dict[str, Any]) -> str:
+    content = payload.get("content")
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            text = item.get("text")
+            if isinstance(text, str) and text.strip():
+                parts.append(text)
+        return "\n".join(parts).strip()
+    text = payload.get("text")
+    if isinstance(text, str):
+        return text.strip()
+    return ""
+
+
+def parse_tool_duration_ms(output_payload: Any) -> int | None:
+    parsed: Any = output_payload
+    if isinstance(output_payload, str):
+        text = output_payload.strip()
+        if text:
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+
+    if not isinstance(parsed, dict):
+        return None
+
+    metadata = parsed.get("metadata")
+    if isinstance(metadata, dict):
+        dur_ms = coerce_int(metadata.get("duration_ms"))
+        if dur_ms is not None:
+            return max(0, dur_ms)
+        dur_seconds = metadata.get("duration_seconds")
+        if isinstance(dur_seconds, (int, float)):
+            return max(0, int(dur_seconds * 1000))
+
+    dur_ms = coerce_int(parsed.get("duration_ms"))
+    if dur_ms is not None:
+        return max(0, dur_ms)
+    dur_seconds = parsed.get("duration_seconds")
+    if isinstance(dur_seconds, (int, float)):
+        return max(0, int(dur_seconds * 1000))
+    return None
+
+
+def load_thread_title_map(global_state_path: Path = CODEX_GLOBAL_STATE_PATH) -> dict[str, str]:
+    try:
+        raw = global_state_path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    section = payload.get("thread-titles")
+    if not isinstance(section, dict):
+        return {}
+    titles = section.get("titles")
+    if not isinstance(titles, dict):
+        return {}
+    mapped: dict[str, str] = {}
+    for key, value in titles.items():
+        if not isinstance(key, str):
+            continue
+        if not isinstance(value, str):
+            continue
+        title = value.strip()
+        if title:
+            mapped[key.strip()] = title
+    return mapped
+
+
+def make_thread_label(first_query_text: str, thread_id: str, cwd: str) -> str:
+    lines = [line.strip() for line in first_query_text.splitlines() if line.strip()]
+    for line in lines:
+        low = line.lower()
+        if low.startswith("<environment_context>"):
+            continue
+        if low.startswith("# context from my ide setup"):
+            continue
+        if low.startswith("## my request for codex"):
+            continue
+        cleaned = line.lstrip("-*# ").strip()
+        if cleaned:
+            return cleaned[:72]
+
+    base = Path(cwd).name if cwd and cwd != "unknown" else "thread"
+    suffix = thread_id.split("-")[0][:8] if thread_id else "unknown"
+    return f"{base}-{suffix}"[:72]
+
+
+def extract_event_rows(sessions_dir: Path) -> list[AuditEventRow]:
+    rows: list[AuditEventRow] = []
     if not sessions_dir.exists():
         return rows
 
+    thread_title_map = load_thread_title_map()
+
     for file_path in sorted(sessions_dir.rglob("*.jsonl")):
+        file_rows: list[AuditEventRow] = []
+        thread_id = file_path.stem
+        context_model = "unknown"
+        context_cwd = "unknown"
+        context_sandbox_mode = "unknown"
+        context_approval_policy = "unknown"
+        first_query_text = ""
+        first_known_cwd = "unknown"
+
+        query_index = 0
+        current_query_id = "unknown"
+        current_conversation_id = "unknown"
+
+        open_tools: dict[str, dict[str, Any]] = {}
+
         try:
             with file_path.open("r", encoding="utf-8") as handle:
                 for line in handle:
@@ -80,35 +254,271 @@ def extract_turn_rows(sessions_dir: Path) -> list[TurnRow]:
                         entry = json.loads(line)
                     except json.JSONDecodeError:
                         continue
-                    if entry.get("type") != "turn_context":
-                        continue
 
-                    payload = entry.get("payload") or {}
-                    model = payload.get("model")
-                    if not model:
-                        continue
                     ts = parse_timestamp(entry.get("timestamp"))
                     if ts is None:
                         continue
 
-                    rows.append(
-                        TurnRow(
-                            timestamp=ts,
-                            model=str(model),
-                            cwd=str(payload.get("cwd") or "unknown"),
-                            sandbox_mode=normalize_sandbox_mode(payload.get("sandbox_policy")),
-                            approval_policy=str(payload.get("approval_policy") or "unknown"),
-                            session_file=str(file_path),
+                    entry_type = entry.get("type")
+                    payload = entry.get("payload")
+                    if not isinstance(payload, dict):
+                        payload = {}
+
+                    if entry_type == "session_meta":
+                        session_id = payload.get("id")
+                        if session_id:
+                            thread_id = str(session_id)
+                        continue
+
+                    if entry_type == "turn_context":
+                        model = payload.get("model")
+                        if model:
+                            context_model = str(model)
+
+                        cwd = payload.get("cwd")
+                        if cwd:
+                            context_cwd = str(cwd)
+                            if first_known_cwd == "unknown":
+                                first_known_cwd = context_cwd
+
+                        if payload.get("sandbox_policy") is not None:
+                            context_sandbox_mode = normalize_sandbox_mode(payload.get("sandbox_policy"))
+
+                        approval = payload.get("approval_policy")
+                        if approval:
+                            context_approval_policy = str(approval)
+
+                        file_rows.append(
+                            AuditEventRow(
+                                timestamp=ts,
+                                event_type="turn_context",
+                                thread_id=thread_id,
+                                conversation_id=current_conversation_id,
+                                query_id=current_query_id,
+                                query_index=query_index if query_index > 0 else None,
+                                model=context_model,
+                                cwd=context_cwd,
+                                sandbox_mode=context_sandbox_mode,
+                                approval_policy=context_approval_policy,
+                                session_file=str(file_path),
+                            )
                         )
-                    )
+                        continue
+
+                    if entry_type == "event_msg":
+                        payload_type = payload.get("type")
+                        if payload_type == "user_message":
+                            query_index += 1
+                            current_query_id = f"{thread_id}:q{query_index}"
+                            current_conversation_id = current_query_id
+
+                            message_text = str(payload.get("message") or "").strip()
+                            if not first_query_text and message_text:
+                                first_query_text = message_text
+
+                            file_rows.append(
+                                AuditEventRow(
+                                    timestamp=ts,
+                                    event_type="user_message",
+                                    thread_id=thread_id,
+                                    conversation_id=current_conversation_id,
+                                    query_id=current_query_id,
+                                    query_index=query_index,
+                                    model=context_model,
+                                    cwd=context_cwd,
+                                    sandbox_mode=context_sandbox_mode,
+                                    approval_policy=context_approval_policy,
+                                    session_file=str(file_path),
+                                    message_role="user",
+                                    message_text=message_text,
+                                    query_text=message_text,
+                                )
+                            )
+                            continue
+
+                        if payload_type == "token_count":
+                            info = payload.get("info")
+                            if not isinstance(info, dict):
+                                continue
+                            last_usage = info.get("last_token_usage")
+                            if not isinstance(last_usage, dict):
+                                continue
+
+                            input_tokens = coerce_int(last_usage.get("input_tokens"))
+                            output_tokens = coerce_int(last_usage.get("output_tokens"))
+                            cached_input_tokens = coerce_int(last_usage.get("cached_input_tokens"))
+                            reasoning_output_tokens = coerce_int(last_usage.get("reasoning_output_tokens"))
+                            total_tokens = coerce_int(last_usage.get("total_tokens"))
+                            if total_tokens is None:
+                                total_tokens = (input_tokens or 0) + (output_tokens or 0)
+
+                            file_rows.append(
+                                AuditEventRow(
+                                    timestamp=ts,
+                                    event_type="token_count",
+                                    thread_id=thread_id,
+                                    conversation_id=current_conversation_id,
+                                    query_id=current_query_id,
+                                    query_index=query_index if query_index > 0 else None,
+                                    model=context_model,
+                                    cwd=context_cwd,
+                                    sandbox_mode=context_sandbox_mode,
+                                    approval_policy=context_approval_policy,
+                                    session_file=str(file_path),
+                                    input_tokens=input_tokens,
+                                    output_tokens=output_tokens,
+                                    cached_input_tokens=cached_input_tokens,
+                                    reasoning_output_tokens=reasoning_output_tokens,
+                                    total_tokens=total_tokens,
+                                )
+                            )
+                            continue
+
+                    if entry_type == "response_item":
+                        payload_type = payload.get("type")
+
+                        if payload_type == "message":
+                            role = str(payload.get("role") or "assistant")
+                            message_text = extract_response_message_text(payload)
+                            if not message_text:
+                                continue
+
+                            if role == "user":
+                                query_index += 1
+                                current_query_id = f"{thread_id}:q{query_index}"
+                                current_conversation_id = current_query_id
+                                if not first_query_text and message_text:
+                                    first_query_text = message_text
+
+                            file_rows.append(
+                                AuditEventRow(
+                                    timestamp=ts,
+                                    event_type="user_message",
+                                    thread_id=thread_id,
+                                    conversation_id=current_conversation_id,
+                                    query_id=current_query_id,
+                                    query_index=query_index if query_index > 0 else None,
+                                    model=context_model,
+                                    cwd=context_cwd,
+                                    sandbox_mode=context_sandbox_mode,
+                                    approval_policy=context_approval_policy,
+                                    session_file=str(file_path),
+                                    message_role=role,
+                                    message_text=message_text,
+                                    query_text=message_text if role == "user" else None,
+                                )
+                            )
+                            continue
+
+                        if payload_type == "function_call":
+                            call_id = str(payload.get("call_id") or "").strip()
+                            if not call_id:
+                                continue
+
+                            open_tools[call_id] = {
+                                "tool_name": str(payload.get("name") or "unknown_tool"),
+                                "start_ts": ts,
+                                "thread_id": thread_id,
+                                "conversation_id": current_conversation_id,
+                                "query_id": current_query_id,
+                                "query_index": query_index if query_index > 0 else None,
+                                "model": context_model,
+                                "cwd": context_cwd,
+                                "sandbox_mode": context_sandbox_mode,
+                                "approval_policy": context_approval_policy,
+                                "session_file": str(file_path),
+                            }
+                            continue
+
+                        if payload_type == "function_call_output":
+                            call_id = str(payload.get("call_id") or "").strip()
+                            if not call_id:
+                                continue
+
+                            start_info = open_tools.pop(call_id, None)
+                            if not start_info:
+                                continue
+
+                            start_ts = start_info["start_ts"]
+                            start_ms = int(start_ts.timestamp() * 1000)
+                            end_ms = int(ts.timestamp() * 1000)
+                            duration_ms = parse_tool_duration_ms(payload.get("output"))
+                            if duration_ms is None:
+                                duration_ms = max(0, end_ms - start_ms)
+
+                            file_rows.append(
+                                AuditEventRow(
+                                    timestamp=ts,
+                                    event_type="tool_call",
+                                    thread_id=str(start_info["thread_id"]),
+                                    conversation_id=str(start_info["conversation_id"]),
+                                    query_id=str(start_info["query_id"]),
+                                    query_index=start_info.get("query_index"),
+                                    model=str(start_info["model"]),
+                                    cwd=str(start_info["cwd"]),
+                                    sandbox_mode=str(start_info["sandbox_mode"]),
+                                    approval_policy=str(start_info["approval_policy"]),
+                                    session_file=str(start_info["session_file"]),
+                                    tool_name=str(start_info["tool_name"]),
+                                    tool_call_id=call_id,
+                                    tool_start_epoch_ms=start_ms,
+                                    tool_end_epoch_ms=end_ms,
+                                    tool_duration_ms=duration_ms,
+                                )
+                            )
+                            continue
+
         except OSError:
             continue
+
+        for call_id, start_info in open_tools.items():
+            start_ts = start_info["start_ts"]
+            start_ms = int(start_ts.timestamp() * 1000)
+            file_rows.append(
+                AuditEventRow(
+                    timestamp=start_ts,
+                    event_type="tool_call",
+                    thread_id=str(start_info["thread_id"]),
+                    conversation_id=str(start_info["conversation_id"]),
+                    query_id=str(start_info["query_id"]),
+                    query_index=start_info.get("query_index"),
+                    model=str(start_info["model"]),
+                    cwd=str(start_info["cwd"]),
+                    sandbox_mode=str(start_info["sandbox_mode"]),
+                    approval_policy=str(start_info["approval_policy"]),
+                    session_file=str(start_info["session_file"]),
+                    tool_name=str(start_info["tool_name"]),
+                    tool_call_id=call_id,
+                    tool_start_epoch_ms=start_ms,
+                )
+            )
+
+        thread_label = thread_title_map.get(thread_id, "").strip()
+        if not thread_label:
+            thread_label = make_thread_label(
+                first_query_text=first_query_text,
+                thread_id=thread_id,
+                cwd=first_known_cwd,
+            )
+        for row in file_rows:
+            row.thread_label = thread_label
+        rows.extend(file_rows)
 
     rows.sort(key=lambda item: item.timestamp)
     return rows
 
 
-def write_csv_atomic(csv_path: Path, rows: list[TurnRow]) -> None:
+def _csv_value(value: Any) -> str | int:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, int):
+        return value
+    return str(value)
+
+
+def write_csv_atomic(csv_path: Path, rows: list[AuditEventRow]) -> None:
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -126,11 +536,30 @@ def write_csv_atomic(csv_path: Path, rows: list[TurnRow]) -> None:
                 {
                     "timestamp_utc": as_utc_iso(row.timestamp),
                     "timestamp_epoch_ms": int(row.timestamp.timestamp() * 1000),
-                    "model": row.model,
-                    "cwd": row.cwd,
-                    "sandbox_mode": row.sandbox_mode,
-                    "approval_policy": row.approval_policy,
-                    "session_file": row.session_file,
+                    "event_type": row.event_type,
+                    "thread_id": _csv_value(row.thread_id),
+                    "thread_label": _csv_value(row.thread_label),
+                    "conversation_id": _csv_value(row.conversation_id),
+                    "query_id": _csv_value(row.query_id),
+                    "query_index": _csv_value(row.query_index),
+                    "model": _csv_value(row.model),
+                    "cwd": _csv_value(row.cwd),
+                    "sandbox_mode": _csv_value(row.sandbox_mode),
+                    "approval_policy": _csv_value(row.approval_policy),
+                    "session_file": _csv_value(row.session_file),
+                    "message_role": _csv_value(row.message_role),
+                    "message_text": _csv_value(row.message_text),
+                    "query_text": _csv_value(row.query_text),
+                    "tool_name": _csv_value(row.tool_name),
+                    "tool_call_id": _csv_value(row.tool_call_id),
+                    "tool_start_epoch_ms": _csv_value(row.tool_start_epoch_ms),
+                    "tool_end_epoch_ms": _csv_value(row.tool_end_epoch_ms),
+                    "tool_duration_ms": _csv_value(row.tool_duration_ms),
+                    "input_tokens": _csv_value(row.input_tokens),
+                    "output_tokens": _csv_value(row.output_tokens),
+                    "cached_input_tokens": _csv_value(row.cached_input_tokens),
+                    "reasoning_output_tokens": _csv_value(row.reasoning_output_tokens),
+                    "total_tokens": _csv_value(row.total_tokens),
                 }
             )
         temp_path = Path(temp_file.name)
@@ -148,14 +577,14 @@ class AuditAppContext:
 
     def refresh_csv(self) -> dict[str, Any]:
         generated_at = datetime.now(timezone.utc)
-        rows = extract_turn_rows(self.sessions_dir)
+        rows = extract_event_rows(self.sessions_dir)
         write_csv_atomic(self.csv_path, rows)
 
         message: str | None = None
         if not self.sessions_dir.exists():
             message = f"Sessions directory does not exist: {self.sessions_dir}"
         elif not rows:
-            message = "No turn_context records with model found in sessions logs."
+            message = "No supported events found in sessions logs."
 
         meta = {
             "status": "ok",
@@ -181,7 +610,7 @@ class AuditAppContext:
 
 
 class AuditDashboardHandler(BaseHTTPRequestHandler):
-    server_version = "ModelAuditLocalApp/1.0"
+    server_version = "ModelAuditLocalApp/2.0"
 
     @property
     def app(self) -> AuditAppContext:

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Model Routing Audit — Observatory</title>
+<title>Codex Usage Intelligence Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -29,7 +29,7 @@ body::before{
 .orb-1{width:600px;height:600px;background:var(--ember-glow);top:-200px;right:-100px;opacity:.6}
 .orb-2{width:500px;height:500px;background:var(--cyan-glow);bottom:-150px;left:-100px;opacity:.5}
 .orb-3{width:400px;height:400px;background:var(--violet-glow);top:40%;left:50%;opacity:.3}
-.shell{position:relative;z-index:1;max-width:1520px;margin:0 auto;padding:24px 28px 60px}
+.shell{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:24px 28px 60px}
 .masthead{display:grid;grid-template-columns:1fr auto;align-items:end;padding:40px 0 28px;border-bottom:1px solid var(--border);gap:20px}
 .masthead h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4.5vw,3.6rem);font-weight:400;letter-spacing:-.02em;line-height:1.05;background:linear-gradient(135deg,var(--text) 40%,var(--ember) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .masthead-sub{margin-top:8px;font-size:.85rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -50,35 +50,48 @@ body::before{
 .hint{font-size:.72rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
 .status{margin-top:8px;font-size:.78rem;color:var(--cyan);font-family:'JetBrains Mono',monospace;min-height:1.2em}
 .status.error{color:var(--rose)}
+.tabs{margin-top:14px;display:flex;gap:8px;align-items:center}
+.tab-btn{appearance:none;border:1px solid var(--border-hi);background:var(--raised);color:var(--text);border-radius:8px;padding:10px 16px;font-size:.84rem;font-weight:700;cursor:pointer;transition:all .2s ease;letter-spacing:.02em}
+.tab-btn:hover{border-color:rgba(255,255,255,.2)}
+.tab-btn.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-glow)}
+.tab{display:none}
+.tab.active{display:block}
 .kpis{margin-top:20px;display:grid;gap:10px;grid-template-columns:repeat(6,1fr)}
 .kpi{padding:16px 14px;border-radius:10px;background:var(--glass);border:1px solid var(--border);backdrop-filter:blur(8px);position:relative;overflow:hidden}
 .kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--ember),transparent);opacity:.4}
 .kpi .label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;font-weight:600}
-.kpi .value{font-size:1.4rem;font-weight:800;line-height:1.1;font-family:'JetBrains Mono',monospace;overflow-wrap:anywhere}
+.kpi .value{font-size:1.2rem;font-weight:800;line-height:1.1;font-family:'JetBrains Mono',monospace;overflow-wrap:anywhere}
 .kpi .value.c1{color:var(--cyan)}.kpi .value.c2{color:var(--ember)}.kpi .value.c3{color:var(--violet)}
 .grid-hero{margin-top:16px;display:grid;grid-template-columns:2fr 1fr;gap:12px}
 .grid-trio{margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid-duo{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .panel{border-radius:12px;padding:16px;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden}
 .panel::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.02) 0%,transparent 40%);pointer-events:none}
 .panel h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .panel h2 .al{flex:1;height:1px;background:var(--border)}
 .chart-box{width:100%;height:300px;position:relative;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.015),transparent);border:1px solid var(--border);overflow:hidden}
-.chart-box.sm{height:260px}.chart-box.tall{height:320px}
+.chart-box.sm{height:260px}.chart-box.tall{height:340px}
+.chart-box.mini{height:180px}
 .chart-box canvas{width:100%!important;height:100%!important}
 .legend{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
 .legend-item{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:.72rem;background:var(--glass);border:1px solid var(--border);color:var(--text-dim);font-family:'JetBrains Mono',monospace}
 .legend-swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .table-section{margin-top:12px}
-.table-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto;max-height:400px;background:var(--surface)}
+.table-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto;max-height:340px;background:var(--surface)}
 table{width:100%;border-collapse:collapse;font-size:.78rem}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border)}
 th{position:sticky;top:0;z-index:2;background:var(--raised);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:600}
-td{color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:.72rem}
+td{color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:.72rem;vertical-align:top}
 td.path{max-width:400px;word-break:break-all}
+td.workspace{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
 .empty{display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.85rem;height:100%;text-align:center;padding:12px}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid-hero,.grid-trio{grid-template-columns:1fr}.masthead{grid-template-columns:1fr}}
-@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.shell{padding:16px}}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:.68rem;border:1px solid var(--border-hi);background:var(--glass);color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+.warning{margin-top:12px;padding:10px 12px;border-radius:8px;border:1px solid rgba(244,114,182,.3);background:rgba(244,114,182,.08);font-size:.78rem;color:#f9d1e5;font-family:'JetBrains Mono',monospace;display:none}
+.warning.active{display:block}
+@media(max-width:1400px){.kpis{grid-template-columns:repeat(5,1fr)}}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid-hero,.grid-trio,.grid-duo{grid-template-columns:1fr}.masthead{grid-template-columns:1fr}}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.shell{padding:16px}.tab-btn{flex:1}}
 </style>
 </head>
 <body>
@@ -86,7 +99,7 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
 <div class="shell">
   <header class="masthead">
     <div>
-      <h1>Codex Model Routing<br/>Observatory</h1>
+      <h1>Codex Usage Intelligence<br/>Dashboard</h1>
       <div class="masthead-sub">
         <span class="dot"></span>
         <span>Last sync: <strong id="lastRefresh">__LAST_REFRESH_UTC__</strong></span>
@@ -95,6 +108,7 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
     </div>
     <div class="masthead-actions"><button id="refreshBtn" class="btn primary">↻ Refresh</button></div>
   </header>
+
   <nav class="controls">
     <button class="btn preset active" data-preset="7d">7 d</button>
     <button class="btn preset" data-preset="12h">12 h</button>
@@ -107,26 +121,91 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
     <span class="hint" id="activeWindowHint">Window: 7d</span>
     <span class="hint" id="activeBucketHint">Bucket: —</span>
   </nav>
+
+  <div class="tabs">
+    <button id="tabRouting" class="tab-btn" data-tab="routing">Model Routing Audit</button>
+    <button id="tabUsage" class="tab-btn active" data-tab="usage">Usage Telemetry</button>
+  </div>
+
   <div id="statusLine" class="status"></div>
-  <section class="kpis">
-    <article class="kpi"><div class="label">Events</div><div class="value c1" id="kpiEvents">0</div></article>
-    <article class="kpi"><div class="label">Models</div><div class="value c2" id="kpiModels">0</div></article>
-    <article class="kpi"><div class="label">Workspaces</div><div class="value c3" id="kpiWorkspaces">0</div></article>
-    <article class="kpi"><div class="label">Dominant Model</div><div class="value" id="kpiDominant">—</div></article>
-    <article class="kpi"><div class="label">Window Start</div><div class="value" id="kpiStart">—</div></article>
-    <article class="kpi"><div class="label">Window End</div><div class="value" id="kpiEnd">—</div></article>
+
+  <section id="routingTab" class="tab">
+    <section class="kpis">
+      <article class="kpi"><div class="label">Events</div><div class="value c1" id="kpiEvents">0</div></article>
+      <article class="kpi"><div class="label">Models</div><div class="value c2" id="kpiModels">0</div></article>
+      <article class="kpi"><div class="label">Workspaces</div><div class="value c3" id="kpiWorkspaces">0</div></article>
+      <article class="kpi"><div class="label">Dominant Model</div><div class="value" id="kpiDominant">—</div></article>
+      <article class="kpi"><div class="label">Window Start</div><div class="value" id="kpiStart">—</div></article>
+      <article class="kpi"><div class="label">Window End</div><div class="value" id="kpiEnd">—</div></article>
+    </section>
+
+    <section class="grid-hero">
+      <article class="panel"><h2>Routing Timeline <span class="al"></span></h2><div class="chart-box"><canvas id="timeseriesCanvas"></canvas></div><div id="timeseriesLegend" class="legend"></div></article>
+      <article class="panel"><h2>Model Share <span class="al"></span></h2><div class="chart-box sm"><canvas id="modelShareCanvas"></canvas></div><div id="modelShareLegend" class="legend"></div></article>
+    </section>
+
+    <section class="grid-trio">
+      <article class="panel"><h2>Workspaces <span class="al"></span></h2><div class="chart-box tall"><canvas id="workspaceCanvas"></canvas></div></article>
+      <article class="panel"><h2>Sandbox Modes <span class="al"></span></h2><div class="chart-box tall"><canvas id="sandboxCanvas"></canvas></div><div id="sandboxLegend" class="legend"></div></article>
+      <article class="panel"><h2>Approval Policy <span class="al"></span></h2><div class="chart-box tall"><canvas id="approvalCanvas"></canvas></div><div id="approvalLegend" class="legend"></div></article>
+    </section>
+
+    <section class="panel table-section"><h2>Recent Routing Events <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Model</th><th>Sandbox</th><th>Approval</th><th>Workspace</th><th>Thread</th></tr></thead><tbody id="eventsTableBody"></tbody></table></div></section>
   </section>
-  <section class="grid-hero">
-    <article class="panel"><h2>Routing Timeline <span class="al"></span></h2><div class="chart-box"><canvas id="timeseriesCanvas"></canvas></div><div id="timeseriesLegend" class="legend"></div></article>
-    <article class="panel"><h2>Model Share <span class="al"></span></h2><div class="chart-box sm"><canvas id="modelShareCanvas"></canvas></div><div id="modelShareLegend" class="legend"></div></article>
+
+  <section id="usageTab" class="tab active">
+    <div id="usageUnavailable" class="warning">Usage telemetry unavailable for old CSV schema. Refresh to regenerate with the new schema.</div>
+
+    <section class="kpis">
+      <article class="kpi"><div class="label">Total Tokens</div><div class="value c1" id="uKpiTotal">0</div></article>
+      <article class="kpi"><div class="label">Input Tokens</div><div class="value c2" id="uKpiInput">0</div></article>
+      <article class="kpi"><div class="label">Output Tokens</div><div class="value c3" id="uKpiOutput">0</div></article>
+      <article class="kpi"><div class="label">Cached Input</div><div class="value" id="uKpiCached">0</div></article>
+      <article class="kpi"><div class="label">Reasoning Output</div><div class="value" id="uKpiReasoning">0</div></article>
+      <article class="kpi"><div class="label">Cache Hit %</div><div class="value" id="uKpiCacheHit">0%</div></article>
+      <article class="kpi"><div class="label">Output / Input</div><div class="value" id="uKpiOutInRatio">0%</div></article>
+      <article class="kpi"><div class="label">Avg Tokens / Query</div><div class="value" id="uKpiAvgPerQuery">0</div></article>
+      <article class="kpi"><div class="label">Most Expensive Workspace</div><div class="value" id="uKpiTopWorkspace">—</div></article>
+      <article class="kpi"><div class="label">Most Expensive Thread</div><div class="value" id="uKpiTopThread">—</div></article>
+      <article class="kpi"><div class="label">Most Expensive Query</div><div class="value" id="uKpiTopQuery">—</div></article>
+    </section>
+
+    <section class="grid-hero">
+      <article class="panel"><h2>Token Consumption Over Time <span class="al"></span></h2><div class="chart-box"><canvas id="usageTokenTrendCanvas"></canvas></div><div id="usageTokenTrendLegend" class="legend"></div></article>
+      <article class="panel"><h2>Input vs Output Share <span class="al"></span></h2><div class="chart-box sm"><canvas id="usageIoShareCanvas"></canvas></div><div id="usageIoShareLegend" class="legend"></div></article>
+    </section>
+
+    <section class="grid-duo">
+      <article class="panel"><h2>Workspace Token Trend <span class="al"></span></h2><div class="chart-box"><canvas id="usageWorkspaceTrendCanvas"></canvas></div><div id="usageWorkspaceTrendLegend" class="legend"></div></article>
+      <article class="panel"><h2>Thread Token Trend <span class="al"></span></h2><div class="chart-box"><canvas id="usageThreadTrendCanvas"></canvas></div><div id="usageThreadTrendLegend" class="legend"></div></article>
+    </section>
+
+    <section class="grid-duo">
+      <article class="panel"><h2>Input vs Output by Workspace <span class="al"></span></h2><div class="chart-box sm"><canvas id="workspaceIoCanvas"></canvas></div></article>
+      <article class="panel"><h2>Input vs Output by Thread <span class="al"></span></h2><div class="chart-box sm"><canvas id="threadIoCanvas"></canvas></div></article>
+    </section>
+
+    <section class="grid-duo">
+      <article class="panel"><h2>Context Bloat (Rolling Input / Query) <span class="al"></span></h2><div class="chart-box"><canvas id="contextBloatCanvas"></canvas></div></article>
+      <article class="panel"><h2>Spike Detector <span class="al"></span> <span class="badge">z >= 3.0 & p90 guard</span></h2><div class="chart-box mini"><canvas id="spikeSparkCanvas"></canvas></div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Bucket Time</th><th>Total</th><th>Baseline Mean</th><th>Z-Score</th><th>Top Workspace</th><th>Top Thread</th></tr></thead><tbody id="spikeBody"></tbody></table></div></article>
+    </section>
+
+    <section class="grid-duo">
+      <article class="panel table-section"><h2>Top Workspaces by Tokens <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Workspace</th><th>Total Tokens</th><th>Input</th><th>Output</th><th>Out/In</th><th>Cache Hit %</th></tr></thead><tbody id="topWorkspacesBody"></tbody></table></div></article>
+      <article class="panel table-section"><h2>Top Threads by Tokens <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Thread</th><th>Total Tokens</th><th>Input</th><th>Output</th><th>Out/In</th><th>Cache Hit %</th></tr></thead><tbody id="topThreadsBody"></tbody></table></div></article>
+    </section>
+
+    <section class="panel table-section"><h2>Top 5 Queries by Tokens <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Workspace</th><th>Thread</th><th>Query</th><th>Total</th><th>Input</th><th>Output</th><th>Out/In</th></tr></thead><tbody id="topQueriesBody"></tbody></table></div></section>
+
+    <section class="grid-duo">
+      <article class="panel table-section"><h2>Query Repeat Detector <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Signature</th><th>Occurrences</th><th>Total Tokens</th><th>Avg Tokens</th><th>Waste Focus</th><th>Workspaces</th><th>Threads</th></tr></thead><tbody id="repeatsBody"></tbody></table></div></article>
+      <article class="panel table-section"><h2>Tool Call Overhead <span class="al"></span></h2><div class="chart-box sm"><canvas id="toolOverheadCanvas"></canvas></div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Tool</th><th>Calls</th><th>Avg Duration</th><th>Total</th><th>Input</th><th>Output</th><th>Tokens / Call</th></tr></thead><tbody id="toolOverheadBody"></tbody></table></div></article>
+    </section>
+
+    <section class="panel table-section"><h2>Context Bloat Slope Leaderboard <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Thread</th><th>Slope</th><th>Latest Rolling Input</th><th>Queries</th></tr></thead><tbody id="contextBloatBody"></tbody></table></div></section>
   </section>
-  <section class="grid-trio">
-    <article class="panel"><h2>Workspaces <span class="al"></span></h2><div class="chart-box tall"><canvas id="workspaceCanvas"></canvas></div></article>
-    <article class="panel"><h2>Sandbox Modes <span class="al"></span></h2><div class="chart-box tall"><canvas id="sandboxCanvas"></canvas></div><div id="sandboxLegend" class="legend"></div></article>
-    <article class="panel"><h2>Approval Policy <span class="al"></span></h2><div class="chart-box tall"><canvas id="approvalCanvas"></canvas></div><div id="approvalLegend" class="legend"></div></article>
-  </section>
-  <section class="panel table-section"><h2>Recent Events <span class="al"></span></h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Model</th><th>Sandbox</th><th>Approval</th><th>Workspace</th><th>Session</th></tr></thead><tbody id="eventsTableBody"></tbody></table></div></section>
 </div>
+
 <script>
 (function(){
 const CSV_URL="__CSV_RELATIVE_PATH__";
@@ -138,50 +217,10 @@ const PRESETS={
   "7d":{ms:6048e5,min:18e5,max:216e5,pts:120}
 };
 const INTERVALS=[6e4,12e4,3e5,6e5,9e5,18e5,36e5,72e5,144e5,216e5];
-const state={records:[],preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max};
+const state={records:[],preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",selection:null};
+const charts={};
 const $=id=>document.getElementById(id);
 
-function setStatus(m,err){$("statusLine").textContent=m||"";$("statusLine").classList.toggle("error",!!err)}
-function fmtLocal(ms){return new Date(ms).toLocaleString()}
-function fmtTime(ms,w){const d=new Date(ms);return w<=864e5?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})}
-function fmtDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+"m";const h=m/60;if(h<24)return(h%1?h.toFixed(1):h)+"h";const d=h/24;return(d%1?d.toFixed(1):d)+"d"}
-function clamp(ms){return Math.max(36e5,Math.min(2592e6,ms))}
-function parseDur(r){if(!r)return null;const m=r.trim().match(/^(\d+(?:\.\d+)?)\s*([mhd])$/i);if(!m)return null;const v=+m[1],u=m[2].toLowerCase();if(!isFinite(v)||v<=0)return null;return clamp(v*(u==="m"?6e4:u==="h"?36e5:864e5))}
-function pickInterval(w,p){const ok=INTERVALS.filter(v=>v>=p.min&&v<=p.max);const ideal=w/p.pts;return ok.find(v=>v>=ideal)||ok[ok.length-1]}
-
-function selectWindow(){
-  const anchor=state.records.length?state.records[state.records.length-1].ts:null;
-  if(!anchor)return{rows:[],startMs:null,endMs:null,bucketMs:state.bucketMs};
-  const end=anchor,start=end-state.windowMs;
-  const p=state.mode==="preset"?PRESETS[state.preset]:{min:6e4,max:216e5,pts:100};
-  const b=pickInterval(state.windowMs,p);state.bucketMs=b;
-  return{rows:state.records.filter(r=>r.ts>=start&&r.ts<=end),startMs:start,endMs:end,bucketMs:b};
-}
-
-function aggregate(rows,startMs,bMs){
-  const bMap=new Map,mC=new Map,wC=new Map,sC=new Map,aC=new Map;
-  for(const r of rows){
-    const bk=startMs+Math.floor((r.ts-startMs)/bMs)*bMs;
-    let b=bMap.get(bk);if(!b){b={ts:bk,total:0,byModel:new Map};bMap.set(bk,b)}
-    b.total++;b.byModel.set(r.model,(b.byModel.get(r.model)||0)+1);
-    mC.set(r.model,(mC.get(r.model)||0)+1);
-    wC.set(r.cwd,(wC.get(r.cwd)||0)+1);
-    sC.set(r.sandbox,(sC.get(r.sandbox)||0)+1);
-    aC.set(r.approval,(aC.get(r.approval)||0)+1);
-  }
-  const buckets=[...bMap.values()].filter(b=>b.total>0).sort((a,b)=>a.ts-b.ts);
-  const models=[...mC.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
-  return{buckets,models,mC,wC,sC,aC};
-}
-
-function sorted(map,limit,fn){
-  const r=[...map.entries()].sort((a,b)=>b[1]-a[1]);
-  return(limit?r.slice(0,limit):r).map(([l,v])=>({label:fn?fn(l):l,value:v}));
-}
-function basename(p){const s=p.split("/").filter(Boolean);return s.length?s[s.length-1]:p}
-function shorten(t,n){return t&&t.length>n?t.slice(0,n-3)+"...":t||""}
-
-// Chart.js global config for dark theme
 Chart.defaults.color="#6b7a8d";
 Chart.defaults.borderColor="rgba(255,255,255,.06)";
 Chart.defaults.font.family="'Outfit',sans-serif";
@@ -195,20 +234,34 @@ Chart.defaults.plugins.tooltip.bodyFont={family:"'JetBrains Mono',monospace",siz
 Chart.defaults.plugins.tooltip.padding=10;
 Chart.defaults.plugins.tooltip.cornerRadius=6;
 
-const charts={};
+function setStatus(m,err){$("statusLine").textContent=m||"";$("statusLine").classList.toggle("error",!!err)}
+function fmtLocal(ms){return new Date(ms).toLocaleString()}
+function fmtTime(ms,w){const d=new Date(ms);return w<=864e5?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})}
+function fmtDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+"m";const h=m/60;if(h<24)return(h%1?h.toFixed(1):h)+"h";const d=h/24;return(d%1?d.toFixed(1):d)+"d"}
+function fmtNum(n){if(!isFinite(n))return "0";return Math.round(n).toLocaleString()}
+function fmtPct(v){if(!isFinite(v))return "0%";return (v*100).toFixed(1)+"%"}
+function clamp(ms){return Math.max(36e5,Math.min(2592e6,ms))}
+function parseDur(r){if(!r)return null;const m=r.trim().match(/^(\d+(?:\.\d+)?)\s*([mhd])$/i);if(!m)return null;const v=+m[1],u=m[2].toLowerCase();if(!isFinite(v)||v<=0)return null;return clamp(v*(u==="m"?6e4:u==="h"?36e5:864e5))}
+function pickInterval(w,p){const ok=INTERVALS.filter(v=>v>=p.min&&v<=p.max);const ideal=w/p.pts;return ok.find(v=>v>=ideal)||ok[ok.length-1]}
+function basename(p){const s=String(p||"").split("/").filter(Boolean);return s.length?s[s.length-1]:String(p||"")}
+function workspaceName(cwd){const b=basename(cwd||"");return b||"unknown"}
+function shorten(t,n){const s=String(t||"");return s.length>n?s.slice(0,n-3)+"...":s}
+function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;")}
+function toNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
+function sigThread(t){return shorten(t,28)}
+function threadDisplay(label,id){const text=(label||"").trim();return text?shorten(text,28):sigThread(id)}
+
 function getOrCreate(id,type,cfg){
   const canvas=document.getElementById(id);
-  if(charts[id]){
-    charts[id].destroy();
-    delete charts[id];
-  }
-  const existing=Chart.getChart(canvas);
-  if(existing){existing.destroy()}
+  if(!canvas)return null;
+  if(charts[id]){charts[id].destroy();delete charts[id]}
+  const existing=Chart.getChart(canvas);if(existing)existing.destroy();
   charts[id]=new Chart(canvas,{type,...cfg});
   return charts[id];
 }
 
 function renderLegend(el,items){
+  if(!el)return;
   el.innerHTML="";
   items.forEach(i=>{
     const s=document.createElement("span");s.className="legend-item";
@@ -217,51 +270,22 @@ function renderLegend(el,items){
   });
 }
 
-function drawTimeseries(buckets,models,windowMs){
-  const leg=$("timeseriesLegend");
-  if(!buckets.length){
-    getOrCreate("timeseriesCanvas","line",{data:{datasets:[]},options:{plugins:{title:{display:true,text:"No data in window",color:"#3d4a5c",font:{size:14}}}}});
-    leg.innerHTML="";return;
-  }
-  const labels=buckets.map(b=>fmtTime(b.ts,windowMs));
-  const datasets=models.map((m,i)=>({
-    label:m,fill:true,
-    data:buckets.map(b=>b.byModel.get(m)||0),
-    borderColor:COLORS[i%COLORS.length],
-    backgroundColor:COLORS[i%COLORS.length]+"22",
-    borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3
-  }));
-  getOrCreate("timeseriesCanvas","line",{
-    data:{labels,datasets},
-    options:{
-      responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
-      scales:{
-        x:{
-          ticks:{maxTicksLimit:8},
-          grid:{color:"rgba(255,255,255,.04)"}},
-        y:{stacked:true,beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"},ticks:{precision:0}}
-      },
-      plugins:{tooltip:{mode:"index"}}
-    }
-  });
-  renderLegend(leg,models.map((m,i)=>({label:m,color:COLORS[i%COLORS.length]})));
-}
-
 function drawDoughnut(canvasId,legendId,pairs,emptyText){
   const leg=legendId?$(legendId):null;
   if(!pairs.length){
     getOrCreate(canvasId,"doughnut",{data:{labels:[],datasets:[]},options:{plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
-    if(leg)leg.innerHTML="";return;
+    if(leg)leg.innerHTML="";
+    return;
   }
   const colors=pairs.map((_,i)=>COLORS[i%COLORS.length]);
   getOrCreate(canvasId,"doughnut",{
     data:{labels:pairs.map(p=>p.label),datasets:[{data:pairs.map(p=>p.value),backgroundColor:colors,borderColor:"#0e1117",borderWidth:2,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",plugins:{tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} events`}}}}
+    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",plugins:{tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmtNum(ctx.parsed)}`}}}}
   });
-  if(leg)renderLegend(leg,pairs.map((p,i)=>({label:`${p.label} (${p.value})`,color:colors[i]})));
+  if(leg)renderLegend(leg,pairs.map((p,i)=>({label:`${p.label} (${fmtNum(p.value)})`,color:colors[i]})));
 }
 
-function drawBars(canvasId,pairs,emptyText){
+function drawBars(canvasId,pairs,emptyText,axisLabel){
   if(!pairs.length){
     getOrCreate(canvasId,"bar",{data:{labels:[],datasets:[]},options:{indexAxis:"y",plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
     return;
@@ -269,51 +293,50 @@ function drawBars(canvasId,pairs,emptyText){
   const colors=pairs.map((_,i)=>COLORS[i%COLORS.length]);
   getOrCreate(canvasId,"bar",{
     data:{labels:pairs.map(p=>p.label),datasets:[{data:pairs.map(p=>p.value),backgroundColor:colors.map(c=>c+"99"),borderColor:colors,borderWidth:1,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",scales:{x:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"},ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10}}}},plugins:{tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} events`}}}}
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",scales:{x:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"},title:axisLabel?{display:true,text:axisLabel}:undefined},y:{grid:{display:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10}}}}}
   });
 }
 
-function renderTable(rows){
-  const recent=[...rows].sort((a,b)=>b.ts-a.ts).slice(0,120);
-  const tb=$("eventsTableBody");
-  if(!recent.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No events in window</td></tr>';return}
-  tb.innerHTML=recent.map(r=>{
-    const t=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");
-    return `<tr><td>${t(fmtLocal(r.ts))}</td><td>${t(r.model)}</td><td>${t(r.sandbox)}</td><td>${t(r.approval)}</td><td class="path" title="${t(r.cwd)}">${t(shorten(r.cwd,70))}</td><td class="path" title="${t(r.session)}">${t(shorten(r.session,80))}</td></tr>`;
-  }).join("");
+function drawGroupedBars(canvasId,rows,emptyText){
+  if(!rows.length){
+    getOrCreate(canvasId,"bar",{data:{labels:[],datasets:[]},options:{indexAxis:"y",plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
+    return;
+  }
+  getOrCreate(canvasId,"bar",{
+    data:{
+      labels:rows.map(r=>r.label),
+      datasets:[
+        {label:"Input",data:rows.map(r=>r.input),backgroundColor:COLORS[0]+"99",borderColor:COLORS[0],borderWidth:1,borderRadius:4},
+        {label:"Output",data:rows.map(r=>r.output),backgroundColor:COLORS[1]+"99",borderColor:COLORS[1],borderWidth:1,borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,indexAxis:"y",
+      scales:{x:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}},y:{grid:{display:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10}}}},
+      plugins:{legend:{display:true,labels:{color:"#6b7a8d",font:{family:"'JetBrains Mono',monospace",size:10}}}}
+    }
+  });
 }
 
-function renderAll(){
-  try{
-    const sel=selectWindow();
-    $("activeWindowHint").textContent="Window: "+fmtDur(state.windowMs);
-    $("activeBucketHint").textContent="Bucket: "+fmtDur(sel.bucketMs);
-    if(!sel.rows.length){
-      $("kpiEvents").textContent="0";$("kpiModels").textContent="0";$("kpiWorkspaces").textContent="0";
-      $("kpiDominant").textContent="—";$("kpiStart").textContent="—";$("kpiEnd").textContent="—";
-      renderTable([]);
-      drawTimeseries([],[],state.windowMs);drawDoughnut("modelShareCanvas","modelShareLegend",[],"No data");
-      drawBars("workspaceCanvas",[],"No data");drawDoughnut("sandboxCanvas","sandboxLegend",[],"No data");
-      drawDoughnut("approvalCanvas","approvalLegend",[],"No data");
-      return;
-    }
-    const a=aggregate(sel.rows,sel.startMs,sel.bucketMs);
-    $("kpiEvents").textContent=sel.rows.length;
-    $("kpiModels").textContent=a.mC.size;
-    $("kpiWorkspaces").textContent=a.wC.size;
-    const top=sorted(a.mC,1)[0];
-    $("kpiDominant").textContent=top?top.label+" ("+top.value+")":"—";
-    $("kpiStart").textContent=sel.startMs?fmtLocal(sel.startMs):"—";
-    $("kpiEnd").textContent=sel.endMs?fmtLocal(sel.endMs):"—";
-    renderTable(sel.rows);
-    drawTimeseries(a.buckets,a.models,state.windowMs);
-    drawDoughnut("modelShareCanvas","modelShareLegend",sorted(a.mC),"No data");
-    drawBars("workspaceCanvas",sorted(a.wC,9,basename),"No data");
-    drawDoughnut("sandboxCanvas","sandboxLegend",sorted(a.sC),"No data");
-    drawDoughnut("approvalCanvas","approvalLegend",sorted(a.aC),"No data");
-  }catch(e){
-    setStatus("Render error: "+String(e),true);
+function drawLineStack(canvasId,labels,datasets,emptyText){
+  if(!datasets.length||!labels.length){
+    getOrCreate(canvasId,"line",{data:{labels:[],datasets:[]},options:{plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
+    return;
   }
+  getOrCreate(canvasId,"line",{
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+      scales:{x:{grid:{color:"rgba(255,255,255,.04)"}},y:{stacked:true,beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}}}
+    }
+  });
+}
+
+function tableRows(tbodyId,rows,colspan){
+  const tb=$(tbodyId);
+  if(!tb)return;
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="${colspan}" style="color:var(--text-muted);text-align:center">No data in window</td></tr>`;return}
+  tb.innerHTML=rows.join("");
 }
 
 function parseCsv(text){
@@ -331,10 +354,473 @@ function parseCsv(text){
   for(const v of data){
     if(!v.length||v.every(x=>x===""))continue;
     const o={};h.forEach((k,i)=>o[k]=v[i]||"");
-    const ep=+o.timestamp_epoch_ms;if(!isFinite(ep))continue;
-    out.push({ts:ep,model:o.model||"unknown",cwd:o.cwd||"unknown",sandbox:o.sandbox_mode||"unknown",approval:o.approval_policy||"unknown",session:o.session_file||"unknown"});
+    const ts=toNum(o.timestamp_epoch_ms);
+    if(!Number.isFinite(ts))continue;
+    const eventType=o.event_type||"turn_context";
+    const input=toNum(o.input_tokens),output=toNum(o.output_tokens),cached=toNum(o.cached_input_tokens),reasoning=toNum(o.reasoning_output_tokens);
+    let total=toNum(o.total_tokens);
+    if(total==null&&(input!=null||output!=null))total=(input||0)+(output||0);
+    out.push({
+      ts,
+      eventType,
+      threadId:o.thread_id||basename(o.session_file||"unknown"),
+      threadLabel:o.thread_label||"",
+      conversationId:o.conversation_id||"unknown",
+      queryId:o.query_id||"unknown",
+      queryIndex:toNum(o.query_index),
+      model:o.model||"unknown",
+      cwd:o.cwd||"unknown",
+      sandbox:o.sandbox_mode||"unknown",
+      approval:o.approval_policy||"unknown",
+      session:o.session_file||"unknown",
+      messageRole:o.message_role||"",
+      messageText:o.message_text||"",
+      queryText:o.query_text||"",
+      toolName:o.tool_name||"",
+      toolCallId:o.tool_call_id||"",
+      toolStart:toNum(o.tool_start_epoch_ms),
+      toolEnd:toNum(o.tool_end_epoch_ms),
+      toolDuration:toNum(o.tool_duration_ms),
+      inputTokens:input,
+      outputTokens:output,
+      cachedInputTokens:cached,
+      reasoningOutputTokens:reasoning,
+      totalTokens:total
+    });
   }
-  out.sort((a,b)=>a.ts-b.ts);return out;
+  out.sort((a,b)=>a.ts-b.ts);
+  return out;
+}
+
+function selectWindow(){
+  const anchor=state.records.length?state.records[state.records.length-1].ts:null;
+  if(!anchor)return{rows:[],startMs:null,endMs:null,bucketMs:state.bucketMs};
+  const end=anchor,start=end-state.windowMs;
+  const p=state.mode==="preset"?PRESETS[state.preset]:{min:6e4,max:216e5,pts:100};
+  const b=pickInterval(state.windowMs,p);state.bucketMs=b;
+  return{rows:state.records.filter(r=>r.ts>=start&&r.ts<=end),startMs:start,endMs:end,bucketMs:b};
+}
+
+function sortedMapEntries(map,limit,labelFn){
+  const arr=[...map.entries()].sort((a,b)=>b[1]-a[1]);
+  return (limit?arr.slice(0,limit):arr).map(([label,value])=>({label:labelFn?labelFn(label):label,value}));
+}
+
+function aggregateRouting(rows,startMs,bMs){
+  const bucketMap=new Map(),mC=new Map(),wC=new Map(),sC=new Map(),aC=new Map();
+  for(const r of rows){
+    if(r.eventType!=="turn_context")continue;
+    const bk=startMs+Math.floor((r.ts-startMs)/bMs)*bMs;
+    let b=bucketMap.get(bk);if(!b){b={ts:bk,total:0,byModel:new Map};bucketMap.set(bk,b)}
+    b.total++;b.byModel.set(r.model,(b.byModel.get(r.model)||0)+1);
+    mC.set(r.model,(mC.get(r.model)||0)+1);
+    const ws=workspaceName(r.cwd);
+    wC.set(ws,(wC.get(ws)||0)+1);
+    sC.set(r.sandbox,(sC.get(r.sandbox)||0)+1);
+    aC.set(r.approval,(aC.get(r.approval)||0)+1);
+  }
+  const buckets=[...bucketMap.values()].filter(b=>b.total>0).sort((a,b)=>a.ts-b.ts);
+  const models=[...mC.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  return{buckets,models,mC,wC,sC,aC};
+}
+
+function drawRoutingTimeseries(buckets,models){
+  const leg=$("timeseriesLegend");
+  if(!buckets.length){
+    getOrCreate("timeseriesCanvas","line",{data:{datasets:[]},options:{plugins:{title:{display:true,text:"No data in window",color:"#3d4a5c",font:{size:14}}}}});
+    leg.innerHTML="";
+    return;
+  }
+  const labels=buckets.map(b=>fmtTime(b.ts,state.windowMs));
+  const datasets=models.map((m,i)=>({
+    label:m,fill:true,data:buckets.map(b=>b.byModel.get(m)||0),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+"22",
+    borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3
+  }));
+  drawLineStack("timeseriesCanvas",labels,datasets,"No data");
+  renderLegend(leg,models.map((m,i)=>({label:m,color:COLORS[i%COLORS.length]})));
+}
+
+function renderRoutingTable(rows){
+  const recent=[...rows].filter(r=>r.eventType==="turn_context").sort((a,b)=>b.ts-a.ts).slice(0,120);
+  const lines=recent.map(r=>`<tr><td>${esc(fmtLocal(r.ts))}</td><td>${esc(r.model)}</td><td>${esc(r.sandbox)}</td><td>${esc(r.approval)}</td><td class="workspace" title="${esc(workspaceName(r.cwd))}">${esc(workspaceName(r.cwd))}</td><td class="path" title="${esc(r.threadId)}">${esc(threadDisplay(r.threadLabel,r.threadId))}</td></tr>`);
+  tableRows("eventsTableBody",lines,6);
+}
+
+function renderRouting(sel){
+  const agg=aggregateRouting(sel.rows,sel.startMs,sel.bucketMs);
+  const routingCount=sel.rows.filter(r=>r.eventType==="turn_context").length;
+  if(!routingCount){
+    $("kpiEvents").textContent="0";$("kpiModels").textContent="0";$("kpiWorkspaces").textContent="0";
+    $("kpiDominant").textContent="—";$("kpiStart").textContent="—";$("kpiEnd").textContent="—";
+    renderRoutingTable([]);
+    drawRoutingTimeseries([],[]);drawDoughnut("modelShareCanvas","modelShareLegend",[],"No data");
+    drawBars("workspaceCanvas",[],"No data");drawDoughnut("sandboxCanvas","sandboxLegend",[],"No data");drawDoughnut("approvalCanvas","approvalLegend",[],"No data");
+    return;
+  }
+  $("kpiEvents").textContent=fmtNum(routingCount);
+  $("kpiModels").textContent=fmtNum(agg.mC.size);
+  $("kpiWorkspaces").textContent=fmtNum(agg.wC.size);
+  const topModel=sortedMapEntries(agg.mC,1)[0];
+  $("kpiDominant").textContent=topModel?`${topModel.label} (${fmtNum(topModel.value)})`:"—";
+  $("kpiStart").textContent=sel.startMs?fmtLocal(sel.startMs):"—";
+  $("kpiEnd").textContent=sel.endMs?fmtLocal(sel.endMs):"—";
+  renderRoutingTable(sel.rows);
+  drawRoutingTimeseries(agg.buckets,agg.models);
+  drawDoughnut("modelShareCanvas","modelShareLegend",sortedMapEntries(agg.mC),"No data");
+  drawBars("workspaceCanvas",sortedMapEntries(agg.wC,9),"No data","Events");
+  drawDoughnut("sandboxCanvas","sandboxLegend",sortedMapEntries(agg.sC),"No data");
+  drawDoughnut("approvalCanvas","approvalLegend",sortedMapEntries(agg.aC),"No data");
+}
+
+function isUsageSchemaAvailable(rows){
+  return rows.some(r=>r.eventType!=="turn_context"||r.totalTokens!=null||r.queryText||r.toolName);
+}
+
+function bucketTokenRows(tokenRows,startMs,bucketMs){
+  const byBucket=new Map();
+  for(const r of tokenRows){
+    const bk=startMs+Math.floor((r.ts-startMs)/bucketMs)*bucketMs;
+    let b=byBucket.get(bk);
+    if(!b){b={ts:bk,input:0,output:0,cached:0,reasoning:0,total:0,byWorkspace:new Map(),byThread:new Map()};byBucket.set(bk,b)}
+    const input=r.inputTokens||0,output=r.outputTokens||0,cached=r.cachedInputTokens||0,reasoning=r.reasoningOutputTokens||0,total=r.totalTokens||0;
+    b.input+=input;b.output+=output;b.cached+=cached;b.reasoning+=reasoning;b.total+=total;
+    const ws=workspaceName(r.cwd);
+    b.byWorkspace.set(ws,(b.byWorkspace.get(ws)||0)+total);
+    b.byThread.set(r.threadId,(b.byThread.get(r.threadId)||0)+total);
+  }
+  return [...byBucket.values()].sort((a,b)=>a.ts-b.ts);
+}
+
+function aggregateTokenDimensions(tokenRows){
+  const workspace=new Map(),thread=new Map(),conversation=new Map(),query=new Map();
+  for(const r of tokenRows){
+    const total=r.totalTokens||0,input=r.inputTokens||0,output=r.outputTokens||0,cached=r.cachedInputTokens||0;
+    const add=(m,key)=>{
+      const k=key||"unknown";
+      if(!m.has(k))m.set(k,{total:0,input:0,output:0,cached:0,cwd:r.cwd||"unknown",threadId:r.threadId||"unknown",conversationId:r.conversationId||"unknown"});
+      const v=m.get(k);v.total+=total;v.input+=input;v.output+=output;v.cached+=cached;
+    };
+    add(workspace,workspaceName(r.cwd));
+    add(thread,r.threadId||"unknown");
+    add(conversation,r.conversationId||"unknown");
+    add(query,r.queryId||"unknown");
+  }
+  return{workspace,thread,conversation,query};
+}
+
+function drawTopNTrend(canvasId,legendId,buckets,keyAccessor,labelFmt,emptyText){
+  if(!buckets.length){
+    drawLineStack(canvasId,[],[],emptyText);
+    const leg=$(legendId);if(leg)leg.innerHTML="";
+    return;
+  }
+  const totals=new Map();
+  for(const b of buckets){
+    const map=keyAccessor(b);
+    map.forEach((v,k)=>totals.set(k,(totals.get(k)||0)+v));
+  }
+  const top=[...totals.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
+  const labels=buckets.map(b=>fmtTime(b.ts,state.windowMs));
+  const datasets=top.map((k,i)=>({label:labelFmt(k),data:buckets.map(b=>keyAccessor(b).get(k)||0),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+"22",fill:true,tension:.3,pointRadius:0,borderWidth:2}));
+  const otherData=buckets.map(b=>{let s=0;keyAccessor(b).forEach((v,k)=>{if(!top.includes(k))s+=v});return s});
+  if(otherData.some(v=>v>0))datasets.push({label:"Other",data:otherData,borderColor:"#6b7a8d",backgroundColor:"rgba(107,122,141,.2)",fill:true,tension:.3,pointRadius:0,borderWidth:2});
+  drawLineStack(canvasId,labels,datasets,emptyText);
+  const leg=$(legendId);if(leg)renderLegend(leg,datasets.map((d,i)=>({label:d.label,color:d.borderColor||COLORS[i%COLORS.length]})));
+}
+
+function percentile(vals,p){
+  if(!vals.length)return 0;
+  const s=[...vals].sort((a,b)=>a-b);
+  const idx=Math.max(0,Math.min(s.length-1,Math.floor((p/100)*s.length)));
+  return s[idx];
+}
+
+function mean(arr){if(!arr.length)return 0;return arr.reduce((a,b)=>a+b,0)/arr.length}
+function stddev(arr,m){if(!arr.length)return 0;const v=arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length;return Math.sqrt(v)}
+
+function normalizeSignature(text){
+  return String(text||"")
+    .toLowerCase()
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi,"<id>")
+    .replace(/\b\d+(?:\.\d+)?\b/g,"<num>")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function regressionSlope(values){
+  const n=values.length;if(n<2)return 0;
+  const xs=values.map((_,i)=>i+1);
+  const xMean=mean(xs),yMean=mean(values);
+  let num=0,den=0;
+  for(let i=0;i<n;i++){const dx=xs[i]-xMean;num+=dx*(values[i]-yMean);den+=dx*dx}
+  return den?num/den:0;
+}
+
+function renderUsage(sel){
+  const usageWarn=$("usageUnavailable");
+  const usageAvailable=isUsageSchemaAvailable(state.records);
+  usageWarn.classList.toggle("active",!usageAvailable);
+
+  if(!usageAvailable){
+    ["uKpiTotal","uKpiInput","uKpiOutput","uKpiCached","uKpiReasoning","uKpiAvgPerQuery"].forEach(id=>$(id).textContent="0");
+    $("uKpiCacheHit").textContent="0%";
+    $("uKpiOutInRatio").textContent="0%";
+    $("uKpiTopWorkspace").textContent="—";
+    $("uKpiTopThread").textContent="—";
+    $("uKpiTopQuery").textContent="—";
+    drawLineStack("usageTokenTrendCanvas",[],[],"Usage telemetry unavailable");
+    drawDoughnut("usageIoShareCanvas","usageIoShareLegend",[],"Usage telemetry unavailable");
+    drawLineStack("usageWorkspaceTrendCanvas",[],[],"Usage telemetry unavailable");
+    drawLineStack("usageThreadTrendCanvas",[],[],"Usage telemetry unavailable");
+    drawGroupedBars("workspaceIoCanvas",[],"Usage telemetry unavailable");
+    drawGroupedBars("threadIoCanvas",[],"Usage telemetry unavailable");
+    drawLineStack("contextBloatCanvas",[],[],"Usage telemetry unavailable");
+    drawLineStack("spikeSparkCanvas",[],[],"Usage telemetry unavailable");
+    drawBars("toolOverheadCanvas",[],"Usage telemetry unavailable");
+    tableRows("topWorkspacesBody",[],6);tableRows("topThreadsBody",[],6);tableRows("topQueriesBody",[],8);
+    tableRows("spikeBody",[],6);tableRows("repeatsBody",[],7);tableRows("toolOverheadBody",[],7);tableRows("contextBloatBody",[],4);
+    return;
+  }
+
+  const tokenRows=sel.rows.filter(r=>r.eventType==="token_count"&&r.totalTokens!=null);
+  const queryRows=sel.rows.filter(r=>r.eventType==="user_message"&&(r.messageRole||"user")==="user"&&r.queryText&&r.queryId&&r.queryId!=="unknown");
+  const toolRows=sel.rows.filter(r=>r.eventType==="tool_call"&&r.toolName);
+  const threadLabelById=new Map();
+  sel.rows.forEach(r=>{if(r.threadId&&!threadLabelById.has(r.threadId)&&r.threadLabel)threadLabelById.set(r.threadId,r.threadLabel);});
+  const threadName=id=>threadDisplay(threadLabelById.get(id)||"",id);
+
+  if(!tokenRows.length){
+    ["uKpiTotal","uKpiInput","uKpiOutput","uKpiCached","uKpiReasoning","uKpiAvgPerQuery"].forEach(id=>$(id).textContent="0");
+    $("uKpiCacheHit").textContent="0%";
+    $("uKpiOutInRatio").textContent="0%";
+    $("uKpiTopWorkspace").textContent="—";
+    $("uKpiTopThread").textContent="—";
+    $("uKpiTopQuery").textContent="—";
+    drawLineStack("usageTokenTrendCanvas",[],[],"No token events in window");
+    drawDoughnut("usageIoShareCanvas","usageIoShareLegend",[],"No token events in window");
+    drawLineStack("usageWorkspaceTrendCanvas",[],[],"No token events in window");
+    drawLineStack("usageThreadTrendCanvas",[],[],"No token events in window");
+    drawGroupedBars("workspaceIoCanvas",[],"No token events in window");
+    drawGroupedBars("threadIoCanvas",[],"No token events in window");
+    drawLineStack("contextBloatCanvas",[],[],"No token events in window");
+    drawLineStack("spikeSparkCanvas",[],[],"No token events in window");
+    drawBars("toolOverheadCanvas",[],"No tool windows in window");
+    tableRows("topWorkspacesBody",[],6);tableRows("topThreadsBody",[],6);tableRows("topQueriesBody",[],8);
+    tableRows("spikeBody",[],6);tableRows("repeatsBody",[],7);tableRows("toolOverheadBody",[],7);tableRows("contextBloatBody",[],4);
+    return;
+  }
+
+  const totals={
+    input:tokenRows.reduce((a,r)=>a+(r.inputTokens||0),0),
+    output:tokenRows.reduce((a,r)=>a+(r.outputTokens||0),0),
+    cached:tokenRows.reduce((a,r)=>a+(r.cachedInputTokens||0),0),
+    reasoning:tokenRows.reduce((a,r)=>a+(r.reasoningOutputTokens||0),0),
+    total:tokenRows.reduce((a,r)=>a+(r.totalTokens||0),0)
+  };
+
+  const dims=aggregateTokenDimensions(tokenRows);
+  const best=(map)=>[...map.entries()].sort((a,b)=>b[1].total-a[1].total)[0];
+  const topWorkspace=best(dims.workspace),topThread=best(dims.thread);
+
+  const queryInfo=new Map();
+  queryRows.forEach(r=>{if(!queryInfo.has(r.queryId))queryInfo.set(r.queryId,{ts:r.ts,text:r.queryText,cwd:workspaceName(r.cwd),threadId:r.threadId})});
+
+  const queryTotalMap=new Map();
+  tokenRows.forEach(r=>{
+    const q=r.queryId||"unknown";
+    if(q==="unknown")return;
+    queryTotalMap.set(q,(queryTotalMap.get(q)||0)+(r.totalTokens||0));
+  });
+  const distinctQueryCount=queryTotalMap.size;
+  const avgPerQuery=distinctQueryCount?totals.total/distinctQueryCount:0;
+
+  $("uKpiTotal").textContent=fmtNum(totals.total);
+  $("uKpiInput").textContent=fmtNum(totals.input);
+  $("uKpiOutput").textContent=fmtNum(totals.output);
+  $("uKpiCached").textContent=fmtNum(totals.cached);
+  $("uKpiReasoning").textContent=fmtNum(totals.reasoning);
+  $("uKpiCacheHit").textContent=fmtPct(totals.cached/Math.max(totals.input,1));
+  $("uKpiOutInRatio").textContent=fmtPct(totals.output/Math.max(totals.input,1));
+  $("uKpiAvgPerQuery").textContent=fmtNum(avgPerQuery);
+  $("uKpiTopWorkspace").textContent=topWorkspace?`${topWorkspace[0]} (${fmtNum(topWorkspace[1].total)})`:"—";
+  $("uKpiTopThread").textContent=topThread?`${threadName(topThread[0])} (${fmtNum(topThread[1].total)})`:"—";
+  const topQueryEntry=[...queryTotalMap.entries()].sort((a,b)=>b[1]-a[1])[0];
+  if(topQueryEntry){
+    const info=queryInfo.get(topQueryEntry[0]);
+    const label=info&&info.text?shorten(info.text,34):shorten(topQueryEntry[0],20);
+    $("uKpiTopQuery").textContent=`${label} (${fmtNum(topQueryEntry[1])})`;
+  }else{
+    $("uKpiTopQuery").textContent="—";
+  }
+
+  const buckets=bucketTokenRows(tokenRows,sel.startMs,sel.bucketMs);
+  const labels=buckets.map(b=>fmtTime(b.ts,state.windowMs));
+  const tokenDatasets=[
+    {label:"Input",data:buckets.map(b=>b.input),borderColor:COLORS[0],backgroundColor:COLORS[0]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2},
+    {label:"Output",data:buckets.map(b=>b.output),borderColor:COLORS[1],backgroundColor:COLORS[1]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2},
+    {label:"Cached Input",data:buckets.map(b=>b.cached),borderColor:COLORS[2],backgroundColor:COLORS[2]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2},
+    {label:"Reasoning Output",data:buckets.map(b=>b.reasoning),borderColor:COLORS[3],backgroundColor:COLORS[3]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2}
+  ];
+  drawLineStack("usageTokenTrendCanvas",labels,tokenDatasets,"No token events in window");
+  renderLegend($("usageTokenTrendLegend"),tokenDatasets.map(d=>({label:d.label,color:d.borderColor})));
+  drawDoughnut(
+    "usageIoShareCanvas",
+    "usageIoShareLegend",
+    [
+      {label:"Input",value:totals.input},
+      {label:"Output",value:totals.output}
+    ],
+    "No token events in window"
+  );
+
+  drawTopNTrend("usageWorkspaceTrendCanvas","usageWorkspaceTrendLegend",buckets,b=>b.byWorkspace,v=>v,"No token events in window");
+  drawTopNTrend("usageThreadTrendCanvas","usageThreadTrendLegend",buckets,b=>b.byThread,threadName,"No token events in window");
+
+  const workspaceRows=[...dims.workspace.entries()].map(([k,v])=>({
+    key:k,total:v.total,input:v.input,output:v.output,cache:v.cached/Math.max(v.input,1)
+  })).sort((a,b)=>b.total-a.total);
+  const threadRows=[...dims.thread.entries()].map(([k,v])=>({
+    key:k,total:v.total,input:v.input,output:v.output,cache:v.cached/Math.max(v.input,1)
+  })).sort((a,b)=>b.total-a.total);
+
+  drawGroupedBars("workspaceIoCanvas",workspaceRows.slice(0,10).map(r=>({label:r.key,input:r.input,output:r.output})),"No data");
+  drawGroupedBars("threadIoCanvas",threadRows.slice(0,10).map(r=>({label:threadName(r.key),input:r.input,output:r.output})),"No data");
+
+  tableRows("topWorkspacesBody",workspaceRows.slice(0,20).map(r=>`<tr><td class="workspace" title="${esc(r.key)}">${esc(r.key)}</td><td>${fmtNum(r.total)}</td><td>${fmtNum(r.input)}</td><td>${fmtNum(r.output)}</td><td>${fmtPct(r.output/Math.max(r.input,1))}</td><td>${fmtPct(r.cache)}</td></tr>`),6);
+  tableRows("topThreadsBody",threadRows.slice(0,20).map(r=>`<tr><td class="path" title="${esc(r.key)}">${esc(threadName(r.key))}</td><td>${fmtNum(r.total)}</td><td>${fmtNum(r.input)}</td><td>${fmtNum(r.output)}</td><td>${fmtPct(r.output/Math.max(r.input,1))}</td><td>${fmtPct(r.cache)}</td></tr>`),6);
+  const queryMetrics=new Map();
+  tokenRows.forEach(r=>{
+    const q=r.queryId||"unknown";
+    if(q==="unknown")return;
+    if(!queryMetrics.has(q))queryMetrics.set(q,{total:0,input:0,output:0});
+    const m=queryMetrics.get(q);
+    m.total+=(r.totalTokens||0);
+    m.input+=(r.inputTokens||0);
+    m.output+=(r.outputTokens||0);
+  });
+  const topQueries=[...queryMetrics.entries()].map(([id,m])=>({id,...m,info:queryInfo.get(id)||{ts:0,text:"(query text unavailable)",cwd:"unknown",threadId:"unknown"}})).sort((a,b)=>b.total-a.total).slice(0,5);
+  tableRows("topQueriesBody",topQueries.map(q=>`<tr><td>${q.info.ts?esc(fmtLocal(q.info.ts)):"—"}</td><td class="workspace" title="${esc(q.info.cwd)}">${esc(q.info.cwd)}</td><td class="path" title="${esc(q.info.threadId)}">${esc(threadName(q.info.threadId))}</td><td class="path" title="${esc(q.info.text)}">${esc(shorten(q.info.text,95))}</td><td>${fmtNum(q.total)}</td><td>${fmtNum(q.input)}</td><td>${fmtNum(q.output)}</td><td>${fmtPct(q.output/Math.max(q.input,1))}</td></tr>`),8);
+
+  const bucketTotals=buckets.map(b=>b.total);
+  const p90=percentile(bucketTotals,90);
+  const spikes=[];
+  for(let i=12;i<buckets.length;i++){
+    const prev=bucketTotals.slice(i-12,i);
+    const m=mean(prev),sd=stddev(prev,m),curr=bucketTotals[i];
+    let z=0;
+    if(sd>0)z=(curr-m)/sd;
+    else if(curr>m)z=999;
+    if(z>=3&&curr>=p90){
+      const b=buckets[i];
+      const topWorkspace=[...b.byWorkspace.entries()].sort((a,b2)=>b2[1]-a[1])[0];
+      const topThread=[...b.byThread.entries()].sort((a,b2)=>b2[1]-a[1])[0];
+      spikes.push({ts:b.ts,total:curr,mean:m,z,workspace:topWorkspace?basename(topWorkspace[0]):"—",thread:topThread?threadName(topThread[0]):"—"});
+    }
+  }
+  const spikeColors=buckets.map(b=>spikes.some(s=>s.ts===b.ts)?"#f472b6":"#38bdf8");
+  getOrCreate("spikeSparkCanvas","line",{
+    data:{labels:labels,datasets:[{label:"Total Tokens",data:bucketTotals,borderColor:"#38bdf8",backgroundColor:"rgba(56,189,248,.15)",fill:true,pointBackgroundColor:spikeColors,pointRadius:2,tension:.25,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{display:false},y:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}}}}
+  });
+  tableRows("spikeBody",spikes.slice(0,30).map(s=>`<tr><td>${esc(fmtLocal(s.ts))}</td><td>${fmtNum(s.total)}</td><td>${fmtNum(s.mean)}</td><td>${s.z===999?"inf":s.z.toFixed(2)}</td><td>${esc(s.workspace)}</td><td>${esc(s.thread)}</td></tr>`),6);
+
+  const byThreadQueryInput=new Map();
+  tokenRows.forEach(r=>{
+    if(!r.threadId||!r.queryId||r.queryId==="unknown")return;
+    const qIdx=(r.queryIndex!=null&&r.queryIndex>0)?r.queryIndex:(Number((r.queryId.match(/:q(\d+)$/)||[])[1])||null);
+    if(!qIdx)return;
+    if(!byThreadQueryInput.has(r.threadId))byThreadQueryInput.set(r.threadId,new Map());
+    const qMap=byThreadQueryInput.get(r.threadId);
+    if(!qMap.has(qIdx))qMap.set(qIdx,0);
+    qMap.set(qIdx,qMap.get(qIdx)+(r.inputTokens||0));
+  });
+
+  const bloatRows=[];
+  byThreadQueryInput.forEach((qMap,threadId)=>{
+    const ordered=[...qMap.entries()].sort((a,b)=>a[0]-b[0]);
+    const vals=ordered.map(e=>e[1]);
+    const rolling=[];
+    for(let i=0;i<vals.length;i++){const win=vals.slice(Math.max(0,i-4),i+1);rolling.push(mean(win));}
+    const slope=regressionSlope(rolling.slice(-10));
+    bloatRows.push({threadId,queries:ordered.length,rolling,slope,latest:rolling.length?rolling[rolling.length-1]:0});
+  });
+  bloatRows.sort((a,b)=>b.slope-a.slope);
+
+  const topBloat=bloatRows.slice(0,3);
+  const maxLen=Math.max(0,...topBloat.map(r=>r.rolling.length));
+  const bloatLabels=Array.from({length:maxLen},(_,i)=>`q${i+1}`);
+  const bloatDatasets=topBloat.map((r,i)=>({label:threadName(r.threadId),data:Array.from({length:maxLen},(_,idx)=>r.rolling[idx]??null),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+"22",fill:false,tension:.25,pointRadius:2,borderWidth:2}));
+  drawLineStack("contextBloatCanvas",bloatLabels,bloatDatasets,"Insufficient query history");
+  tableRows("contextBloatBody",bloatRows.slice(0,30).map(r=>`<tr><td class="path" title="${esc(r.threadId)}">${esc(threadName(r.threadId))}</td><td>${r.slope.toFixed(3)}</td><td>${fmtNum(r.latest)}</td><td>${fmtNum(r.queries)}</td></tr>`),4);
+
+  const repeatMap=new Map();
+  queryRows.forEach(r=>{
+    const sig=normalizeSignature(r.queryText);
+    if(!sig)return;
+    if(!repeatMap.has(sig))repeatMap.set(sig,{occ:0,total:0,workspaces:new Set(),threads:new Set()});
+    const item=repeatMap.get(sig);
+    item.occ+=1;
+    item.total+=(queryTotalMap.get(r.queryId)||0);
+    item.workspaces.add(r.cwd||"unknown");
+    item.threads.add(r.threadId||"unknown");
+  });
+  const repeatRows=[...repeatMap.entries()].map(([sig,v])=>({
+    sig,occ:v.occ,total:v.total,avg:v.occ?v.total/v.occ:0,waste:v.occ?v.total*(v.occ-1)/v.occ:0,workspaceCount:v.workspaces.size,threadCount:v.threads.size
+  })).filter(r=>r.occ>=3).sort((a,b)=>b.waste-a.waste);
+  tableRows("repeatsBody",repeatRows.slice(0,50).map(r=>`<tr><td class="path" title="${esc(r.sig)}">${esc(shorten(r.sig,90))}</td><td>${fmtNum(r.occ)}</td><td>${fmtNum(r.total)}</td><td>${fmtNum(r.avg)}</td><td>${fmtNum(r.waste)}</td><td>${fmtNum(r.workspaceCount)}</td><td>${fmtNum(r.threadCount)}</td></tr>`),7);
+
+  const tokenByThread=tokenRows.reduce((m,r)=>{if(!m.has(r.threadId))m.set(r.threadId,[]);m.get(r.threadId).push(r);return m},new Map());
+  const toolAgg=new Map();
+  toolRows.forEach(t=>{
+    const name=t.toolName||"unknown_tool";
+    let tokensDuring=0,inputDuring=0,outputDuring=0;
+    if(t.toolStart!=null&&t.toolEnd!=null&&tokenByThread.has(t.threadId)){
+      tokenByThread.get(t.threadId).forEach(tok=>{
+        if(tok.ts>=t.toolStart&&tok.ts<=t.toolEnd){
+          tokensDuring+=(tok.totalTokens||0);
+          inputDuring+=(tok.inputTokens||0);
+          outputDuring+=(tok.outputTokens||0);
+        }
+      });
+    }
+    if(!toolAgg.has(name))toolAgg.set(name,{calls:0,durationSum:0,durationCount:0,tokens:0,input:0,output:0});
+    const a=toolAgg.get(name);
+    a.calls+=1;
+    if(t.toolDuration!=null){a.durationSum+=t.toolDuration;a.durationCount+=1}
+    a.tokens+=tokensDuring;
+    a.input+=inputDuring;
+    a.output+=outputDuring;
+  });
+  const toolRowsAgg=[...toolAgg.entries()].map(([name,a])=>({
+    name,calls:a.calls,avgDuration:a.durationCount?a.durationSum/a.durationCount:0,tokens:a.tokens,input:a.input,output:a.output,tokensPerCall:a.calls?a.tokens/a.calls:0
+  })).sort((a,b)=>b.tokensPerCall-a.tokensPerCall);
+  drawBars("toolOverheadCanvas",toolRowsAgg.slice(0,10).map(r=>({label:r.name,value:r.tokensPerCall})),"No tool calls","Tokens / call");
+  tableRows("toolOverheadBody",toolRowsAgg.slice(0,40).map(r=>`<tr><td>${esc(r.name)}</td><td>${fmtNum(r.calls)}</td><td>${r.avgDuration?fmtDur(r.avgDuration):"—"}</td><td>${fmtNum(r.tokens)}</td><td>${fmtNum(r.input)}</td><td>${fmtNum(r.output)}</td><td>${fmtNum(r.tokensPerCall)}</td></tr>`),7);
+}
+
+function renderActiveTab(){
+  if(!state.selection)return;
+  if(state.activeTab==="routing")renderRouting(state.selection);
+  else renderUsage(state.selection);
+}
+
+function renderAll(){
+  try{
+    const sel=selectWindow();
+    state.selection=sel;
+    $("activeWindowHint").textContent="Window: "+fmtDur(state.windowMs);
+    $("activeBucketHint").textContent="Bucket: "+fmtDur(sel.bucketMs);
+    renderActiveTab();
+  }catch(e){setStatus("Render error: "+String(e),true)}
+}
+
+function setActiveTab(tab){
+  state.activeTab=tab;
+  ["routing","usage"].forEach(name=>{
+    $(name==="routing"?"tabRouting":"tabUsage").classList.toggle("active",tab===name);
+    $(name==="routing"?"routingTab":"usageTab").classList.toggle("active",tab===name);
+  });
+  renderActiveTab();
 }
 
 async function loadCsv(msg=true){
@@ -342,7 +828,7 @@ async function loadCsv(msg=true){
     const r=await fetch(CSV_URL+"?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)throw new Error("CSV load failed ("+r.status+")");
     state.records=parseCsv(await r.text());
-    if(msg)setStatus("Loaded "+state.records.length+" events");
+    if(msg)setStatus("Loaded "+state.records.length+" rows");
     renderAll();
   }catch(e){setStatus(String(e),true)}
 }
@@ -353,8 +839,13 @@ async function refresh(){
     const r=await fetch("/refresh",{method:"POST"});const j=await r.json();
     if(!r.ok||j.status!=="ok")throw new Error(j.message||"Refresh failed");
     $("lastRefresh").textContent=j.generated_at_utc||new Date().toISOString();
-    setStatus("Refresh done — "+j.rows_written+" rows");await loadCsv(false);
+    setStatus("Refresh done — "+j.rows_written+" rows");
+    await loadCsv(false);
   }catch(e){setStatus(String(e),true)}finally{$("refreshBtn").disabled=false}
+}
+
+function markPreset(){
+  document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("active",state.mode==="preset"&&b.dataset.preset===state.preset));
 }
 
 function bind(){
@@ -369,19 +860,17 @@ function bind(){
   });
   $("customDuration").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("applyCustom").click()}});
   $("refreshBtn").addEventListener("click",refresh);
-  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,150)});
-}
-
-function markPreset(){
-  document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("active",state.mode==="preset"&&b.dataset.preset===state.preset));
+  $("tabRouting").addEventListener("click",()=>setActiveTab("routing"));
+  $("tabUsage").addEventListener("click",()=>setActiveTab("usage"));
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderActiveTab,150)});
 }
 
 function entrance(){
   gsap.from(".masthead",{y:-30,opacity:0,duration:.8,ease:"power3.out"});
   gsap.from(".controls",{y:20,opacity:0,duration:.6,delay:.2,ease:"power3.out"});
-  gsap.from(".kpi",{y:30,opacity:0,duration:.5,stagger:.07,delay:.3,ease:"power3.out"});
-  gsap.from(".panel",{y:40,opacity:0,duration:.6,stagger:.1,delay:.5,ease:"power3.out"});
-  gsap.from(".table-section",{y:40,opacity:0,duration:.6,delay:.9,ease:"power3.out"});
+  gsap.from(".tabs",{y:20,opacity:0,duration:.6,delay:.25,ease:"power3.out"});
+  gsap.from(".kpi",{y:30,opacity:0,duration:.5,stagger:.03,delay:.3,ease:"power3.out"});
+  gsap.from(".panel",{y:40,opacity:0,duration:.6,stagger:.06,delay:.45,ease:"power3.out"});
 }
 
 function init(){
