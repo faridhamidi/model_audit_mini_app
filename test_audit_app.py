@@ -5,23 +5,23 @@ import gzip
 import json
 from pathlib import Path
 
-from model_audit_mini_app import model_audit_local_app as app_module
-from model_audit_mini_app.metrics_audit import build_usage_audit_report
-from model_audit_mini_app.model_audit_local_app import (
+from model_audit_mini_app import audit_parser as parser_module
+from model_audit_mini_app.audit_core import (
     AUDIT_JSON_NAME,
     OPPORTUNITIES_JSON_NAME,
     SUMMARY_JSON_NAME,
-    AuditAppContext,
     CSV_HEADERS,
     DATA_CATALOG_NAME,
     DATA_DIR_NAME,
     DATASET_SPECS,
     build_optimization_report,
-    extract_event_rows,
     load_thread_title_map,
     parse_timestamp,
     write_csv_atomic,
 )
+from model_audit_mini_app.metrics_audit import build_usage_audit_report
+from model_audit_mini_app.audit_parser import extract_event_rows
+from model_audit_mini_app.audit_server import AuditAppContext
 
 
 def test_parse_timestamp_accepts_zulu() -> None:
@@ -236,7 +236,7 @@ def test_load_thread_title_map_reads_titles(tmp_path: Path) -> None:
 
 
 def test_extract_event_rows_prefers_global_thread_title(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(app_module, "load_thread_title_map", lambda: {"thread-123": "Readable Thread"})
+    monkeypatch.setattr(parser_module, "load_thread_title_map", lambda: {"thread-123": "Readable Thread"})
 
     sessions = tmp_path / "sessions"
     sessions.mkdir()

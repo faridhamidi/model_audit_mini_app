@@ -1,108 +1,66 @@
 # model_audit_mini_app
 
-A local web dashboard for auditing your Codex model usage — see which models were used, how many tokens were consumed, and whether the numbers add up. Runs entirely on your machine, no accounts or internet required.
+Local dashboard for auditing Codex session usage: model routing, token usage, tool calls, and optimization opportunities.
+
+## Public Repo Notes
+
+This repo is configured to avoid committing runtime artifacts that can include sensitive local metadata (for example local filesystem paths, thread labels, and prompt text).
+
+Ignored generated outputs:
+- `data/`
+- `model_audit_audit.json`
+- `model_audit_summary.json`
+- `model_audit_opportunities.json`
 
 ## Requirements
 
 - Python 3.10+
-- [Codex CLI](https://github.com/openai/codex) (session logs must exist at `~/.codex/sessions` as `.jsonl` or `.jsonl.gz`)
+- [Codex CLI](https://github.com/openai/codex) with session logs in `~/.codex/sessions`
 
-## Usage
+## Quick Start
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -U pip
+python3 -m pip install -r requirements-dev.txt
 ./run_model_audit_dashboard.sh
 ```
 
-Then open http://127.0.0.1:8765 in your browser.
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
-That's it. The dashboard loads your Codex session history automatically.
-
-### Options
-
-```
-./run_model_audit_dashboard.sh \
-  -p 8765                        # port (default: 8765)
-  -h 127.0.0.1                   # host (default: 127.0.0.1)
-  -s ~/.codex/sessions           # Codex sessions directory
-  -r .                           # reports output directory
-  --max-retention-days 31        # drop events older than N days (default: 31)
-  --max-csv-rows 0               # hard row cap, 0 = disabled (default: 0)
-```
-
-### Refreshing Data
-
-Hit the **Refresh** button in the dashboard to re-parse your latest session logs without restarting the server.
-
-### Programmatic API Endpoints
-
-- `/audit.json` - token integrity checks and reconciliation report.
-- `/summary.json` - pre-aggregated rollups by model, workspace, thread, and tool.
-- `/opportunities.json` - prioritized optimization opportunities with estimated token savings and next actions.
-- `/data/catalog.json` - dataset metadata and generated CSV inventory.
-
----
-
-## What It Shows
-
-| Section | What you get |
-|---|---|
-| Routing | Which model and sandbox policy was used per session turn |
-| Queries | Your messages and the queries sent to the model |
-| Token Usage | Input/output/cached token counts per query |
-| Tool Calls | Which tools were invoked and how long they took |
-| Optimization Coach | Ranked opportunities to cut token waste with estimated savings |
-
-### Audit Checks
-
-The dashboard runs 5 automatic checks on your token data and flags any anomalies:
-
-| Check | What it verifies |
-|---|---|
-| A1 | `total_tokens` == `input_tokens + output_tokens` |
-| A2 | `cached_input_tokens` <= `input_tokens` |
-| A3 | `reasoning_output_tokens` <= `output_tokens` |
-| A4 | All token values are non-negative |
-| A5 | Average tokens per query is internally consistent |
-
----
-
-## For Developers
-
-### Project Structure
-
-```
-model_audit_mini_app/
-├── model_audit_local_app.py     # HTTP server, JSONL parser, CSV writer
-├── metrics_audit.py             # Audit checks and reconciliation logic
-├── model_audit_dashboard.html   # Frontend dashboard (served at /)
-├── model_audit_summary.json     # Generated rollup summary API artifact
-├── model_audit_opportunities.json # Generated optimization opportunities artifact
-├── run_model_audit_dashboard.sh # Shell launcher
-├── test_model_audit_local_app.py
-└── data/                        # Generated at runtime, not committed
-    ├── catalog.json
-    ├── routing_context.csv
-    ├── query_messages.csv
-    ├── usage_tokens.csv
-    └── tool_calls.csv
-```
-
-### Running Tests
+## CLI Options
 
 ```bash
-# Using the local venv
-.venv/bin/pytest
+./run_model_audit_dashboard.sh \
+  -p 8765 \
+  -h 127.0.0.1 \
+  -s ~/.codex/sessions \
+  -r . \
+  --max-retention-days 31 \
+  --max-csv-rows 0
+```
 
-# Or directly
+## API Endpoints
+
+- `/audit.json`: token integrity checks and reconciliation report
+- `/summary.json`: rollups by model/workspace/thread/tool
+- `/opportunities.json`: prioritized optimization opportunities
+- `/data/catalog.json`: generated dataset metadata
+
+## Development
+
+Run tests:
+
+```bash
 python3 -m pytest
 ```
 
-### Extending
-
-The app is a single-file server with no framework dependencies — keep it that way.
-
-To add a new event type:
-1. Add a new `*_CSV_HEADERS` list
-2. Add an entry to `DATASET_SPECS`
-3. Add parsing logic in `extract_event_rows()`
-4. Add a corresponding test fixture in `test_model_audit_local_app.py`
+Core source files:
+- `main.py`
+- `audit_server.py`
+- `audit_parser.py`
+- `audit_csv.py`
+- `audit_summary_report.py`
+- `audit_optimization_report.py`
+- `metrics_audit.py`

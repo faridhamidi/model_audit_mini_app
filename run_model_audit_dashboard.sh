@@ -4,7 +4,7 @@
 set -Eeuo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${APP_DIR}/.." && pwd)"
+REPO_ROOT="${APP_DIR}"
 HOST="127.0.0.1"
 PORT="8765"
 SESSIONS_DIR="${HOME}/.codex/sessions"
@@ -84,7 +84,7 @@ if [[ -x "${REPO_ROOT}/.venv/bin/python" ]]; then
   PYTHON_BIN="${REPO_ROOT}/.venv/bin/python"
 fi
 
-exec "${PYTHON_BIN}" "${APP_DIR}/model_audit_local_app.py" \
+exec "${PYTHON_BIN}" "${APP_DIR}/main.py" \
   --host "${HOST}" \
   --port "${PORT}" \
   --sessions-dir "${SESSIONS_DIR}" \

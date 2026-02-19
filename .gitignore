@@ -1,4 +1,29 @@
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
 .DS_Store
-*.csv
+.idea/
+.vscode/
+
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Runtime-generated app outputs (can include local paths/thread metadata)
+data/
+model_audit_audit.json
+model_audit_summary.json
+model_audit_opportunities.json
+
+# Local-only docs/assets not for public repo
+design-system/
+frontend-SKILL.md
