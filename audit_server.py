@@ -6,6 +6,8 @@ import csv
 import json
 import sys
 import tempfile
+import threading
+import time
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -55,6 +57,15 @@ except ImportError:  # pragma: no cover - support direct script execution
     from metrics_audit import build_usage_audit_report  # type: ignore[no-redef]
 
 
+REFRESH_COOLDOWN_SECONDS = 3
+
+
+class RefreshCooldownError(RuntimeError):
+    def __init__(self, *, retry_after_seconds: float, message: str) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = max(0.0, float(retry_after_seconds))
+
+
 class AuditAppContext:
     def __init__(
         self,
@@ -63,6 +74,7 @@ class AuditAppContext:
         *,
         max_retention_days: int = DEFAULT_MAX_RETENTION_DAYS,
         max_csv_rows: int = DEFAULT_MAX_CSV_ROWS,
+        refresh_cooldown_seconds: int = REFRESH_COOLDOWN_SECONDS,
     ) -> None:
         self.sessions_dir = sessions_dir
         self.reports_dir = reports_dir
@@ -74,7 +86,36 @@ class AuditAppContext:
         self.opportunities_json_path = reports_dir / OPPORTUNITIES_JSON_NAME
         self.max_retention_days = max_retention_days
         self.max_csv_rows = max_csv_rows
+        self.refresh_cooldown_seconds = max(0.0, float(refresh_cooldown_seconds))
         self.last_refresh_meta: dict[str, Any] | None = None
+        self._refresh_lock = threading.Lock()
+        self._refresh_in_progress = False
+        self._last_refresh_completed_monotonic: float | None = None
+
+    def refresh_csv_guarded(self) -> dict[str, Any]:
+        now = time.monotonic()
+        with self._refresh_lock:
+            if self._refresh_in_progress:
+                raise RefreshCooldownError(
+                    retry_after_seconds=self.refresh_cooldown_seconds,
+                    message="Refresh already in progress. Please wait before retrying.",
+                )
+            if self._last_refresh_completed_monotonic is not None:
+                elapsed = now - self._last_refresh_completed_monotonic
+                remaining = self.refresh_cooldown_seconds - elapsed
+                if remaining > 0:
+                    raise RefreshCooldownError(
+                        retry_after_seconds=remaining,
+                        message=f"Refresh cooldown active. Retry in {int(remaining) + 1}s.",
+                    )
+            self._refresh_in_progress = True
+
+        try:
+            return self.refresh_csv()
+        finally:
+            with self._refresh_lock:
+                self._refresh_in_progress = False
+                self._last_refresh_completed_monotonic = time.monotonic()
 
     def refresh_csv(self) -> dict[str, Any]:
         generated_at = datetime.now(timezone.utc)
@@ -385,13 +426,25 @@ class AuditDashboardHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/refresh":
             try:
-                meta = self.app.refresh_csv()
+                meta = self.app.refresh_csv_guarded()
+            except RefreshCooldownError as exc:
+                retry_after_seconds = max(1, int(exc.retry_after_seconds + 0.999))
+                self._send_json(
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                    {
+                        "status": "error",
+                        "message": str(exc),
+                        "retry_after_seconds": retry_after_seconds,
+                    },
+                )
+                return
             except Exception as exc:  # noqa: BLE001
                 self._send_json(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                     {"status": "error", "message": f"Refresh failed: {exc}"},
                 )
                 return
+            meta["refresh_cooldown_seconds"] = int(self.app.refresh_cooldown_seconds)
             self._send_json(HTTPStatus.OK, meta)
             return
 

@@ -311,7 +311,7 @@ const PRESETS={
   "7d":{ms:6048e5,min:18e5,max:216e5,pts:120}
 };
 const INTERVALS=[6e4,12e4,3e5,6e5,9e5,18e5,36e5,72e5,144e5,216e5];
-const state={audit:null,opportunities:null,catalog:null,preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",usageAuditTab:"usage",selection:null,anchorMs:null,loadId:0};
+const state={audit:null,opportunities:null,catalog:null,preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",usageAuditTab:"usage",selection:null,anchorMs:null,loadId:0,refreshInFlight:false,refreshCooldownUntilMs:0,refreshCooldownTimer:null};
 const charts={};
 const $=id=>document.getElementById(id);
 
@@ -329,6 +329,40 @@ Chart.defaults.plugins.tooltip.padding=10;
 Chart.defaults.plugins.tooltip.cornerRadius=6;
 
 function setStatus(m,err){$("statusLine").textContent=m||"";$("statusLine").classList.toggle("error",!!err)}
+function refreshCooldownActive(){return Date.now()<state.refreshCooldownUntilMs}
+function updateRefreshButtonState(){
+  const btn=$("refreshBtn");
+  if(state.refreshInFlight){
+    btn.disabled=true;
+    btn.textContent="Refreshing…";
+    return;
+  }
+  if(refreshCooldownActive()){
+    btn.disabled=true;
+    btn.textContent="↻ Refresh (cooldown)";
+    return;
+  }
+  btn.disabled=false;
+  btn.textContent="↻ Refresh";
+}
+function applyRefreshCooldown(seconds){
+  const cooldownMs=Math.max(0,Math.floor((Number(seconds)||0)*1000));
+  if(cooldownMs<=0){
+    updateRefreshButtonState();
+    return;
+  }
+  state.refreshCooldownUntilMs=Math.max(state.refreshCooldownUntilMs,Date.now()+cooldownMs);
+  if(state.refreshCooldownTimer){
+    clearTimeout(state.refreshCooldownTimer);
+    state.refreshCooldownTimer=null;
+  }
+  const remainingMs=Math.max(0,state.refreshCooldownUntilMs-Date.now());
+  state.refreshCooldownTimer=setTimeout(()=>{
+    state.refreshCooldownTimer=null;
+    updateRefreshButtonState();
+  },remainingMs);
+  updateRefreshButtonState();
+}
 function fmtLocal(ms){return new Date(ms).toLocaleString()}
 function fmtTime(ms,w){const d=new Date(ms);return w<=864e5?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})}
 function fmtDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+"m";const h=m/60;if(h<24)return(h%1?h.toFixed(1):h)+"h";const d=h/24;return(d%1?d.toFixed(1):d)+"d"}
@@ -1149,17 +1183,34 @@ async function loadWindowData(msg=true,refreshMeta=false){
 }
 
 async function refresh(){
-  $("refreshBtn").disabled=true;setStatus("Refreshing…");
+  if(state.refreshInFlight)return;
+  if(refreshCooldownActive()){
+    const remaining=Math.max(1,Math.ceil((state.refreshCooldownUntilMs-Date.now())/1000));
+    setStatus("Refresh cooldown active — retry in "+remaining+"s",true);
+    updateRefreshButtonState();
+    return;
+  }
+  state.refreshInFlight=true;
+  updateRefreshButtonState();
+  setStatus("Refreshing…");
   try{
-    const r=await fetch("/refresh",{method:"POST"});const j=await r.json();
+    const r=await fetch("/refresh",{method:"POST"});
+    let j={};
+    try{j=await r.json()}catch(_err){j={}}
+    if(r.status===429){
+      const retryAfter=Number(j.retry_after_seconds||3);
+      applyRefreshCooldown(retryAfter);
+      throw new Error(j.message||("Refresh rate-limited. Retry in "+Math.ceil(retryAfter)+"s"));
+    }
     if(!r.ok||j.status!=="ok")throw new Error(j.message||"Refresh failed");
+    applyRefreshCooldown(Number(j.refresh_cooldown_seconds||3));
     $("lastRefresh").textContent=j.generated_at_utc||new Date().toISOString();
     const trimmed=Number(j.rows_trimmed_total||0);
     const trimTail=trimmed>0?(" · trimmed "+trimmed+" old rows"):"";
     const auditTail=j.audit_status?(" · audit "+String(j.audit_status).toUpperCase()):"";
     setStatus("Refresh done — "+j.rows_written+" rows"+trimTail+auditTail);
     await loadWindowData(false,true);
-  }catch(e){setStatus(String(e),true)}finally{$("refreshBtn").disabled=false}
+  }catch(e){setStatus(String(e),true)}finally{state.refreshInFlight=false;updateRefreshButtonState()}
 }
 
 function markPreset(){
@@ -1197,6 +1248,7 @@ function init(){
   const lr=$("lastRefresh");
   if(!lr.textContent||lr.textContent.includes("__LAST_REFRESH"))lr.textContent="awaiting sync";
   setUsageAuditTab(state.usageAuditTab);
+  updateRefreshButtonState();
   bind();markPreset();entrance();loadWindowData(true,true);
 }
 init();

@@ -5,6 +5,8 @@ import gzip
 import json
 from pathlib import Path
 
+import pytest
+
 from model_audit_mini_app import audit_parser as parser_module
 from model_audit_mini_app.audit_core import (
     AUDIT_JSON_NAME,
@@ -21,7 +23,7 @@ from model_audit_mini_app.audit_core import (
 )
 from model_audit_mini_app.metrics_audit import build_usage_audit_report
 from model_audit_mini_app.audit_parser import extract_event_rows
-from model_audit_mini_app.audit_server import AuditAppContext
+from model_audit_mini_app.audit_server import AuditAppContext, RefreshCooldownError
 
 
 def test_parse_timestamp_accepts_zulu() -> None:
@@ -387,6 +389,77 @@ def test_refresh_writes_audit_json(tmp_path: Path) -> None:
     assert len(catalog["datasets"]) == len(DATASET_SPECS)
     usage_dataset = next(d for d in catalog["datasets"] if d["key"] == "usage_tokens")
     assert usage_dataset["row_count"] == 1
+
+
+def test_refresh_guard_blocks_immediate_repeat(monkeypatch, tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    (sessions / "rollout.jsonl").write_text(
+        "\n".join(
+            [
+                '{"type":"session_meta","timestamp":"2026-02-17T01:00:00Z","payload":{"id":"thread-guard"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:02Z","payload":{"type":"user_message","message":"q1"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:03Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":50,"output_tokens":5,"total_tokens":55}}}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "model_audit_dashboard.html").write_text("<html></html>", encoding="utf-8")
+
+    monotonic_values = iter([100.0, 100.5, 101.0])
+    monkeypatch.setattr(
+        "model_audit_mini_app.audit_server.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+
+    app_context = AuditAppContext(
+        sessions_dir=sessions,
+        reports_dir=reports,
+        refresh_cooldown_seconds=3,
+    )
+    app_context.refresh_csv_guarded()
+
+    with pytest.raises(RefreshCooldownError) as exc_info:
+        app_context.refresh_csv_guarded()
+    assert 0 < exc_info.value.retry_after_seconds <= 3
+
+
+def test_refresh_guard_allows_after_cooldown(monkeypatch, tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    (sessions / "rollout.jsonl").write_text(
+        "\n".join(
+            [
+                '{"type":"session_meta","timestamp":"2026-02-17T01:00:00Z","payload":{"id":"thread-guard-ok"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:02Z","payload":{"type":"user_message","message":"q1"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:03Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":50,"output_tokens":5,"total_tokens":55}}}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "model_audit_dashboard.html").write_text("<html></html>", encoding="utf-8")
+
+    monotonic_values = iter([200.0, 200.5, 204.0, 204.5])
+    monkeypatch.setattr(
+        "model_audit_mini_app.audit_server.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+
+    app_context = AuditAppContext(
+        sessions_dir=sessions,
+        reports_dir=reports,
+        refresh_cooldown_seconds=3,
+    )
+    first = app_context.refresh_csv_guarded()
+    second = app_context.refresh_csv_guarded()
+    assert first["status"] == "ok"
+    assert second["status"] == "ok"
 
 
 def test_refresh_keeps_only_latest_31_days(tmp_path: Path) -> None:
