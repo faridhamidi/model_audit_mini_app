@@ -33,6 +33,12 @@ That's it. The dashboard loads your Codex session history automatically.
 
 Hit the **Refresh** button in the dashboard to re-parse your latest session logs without restarting the server.
 
+### Programmatic API Endpoints
+
+- `/audit.json` - token integrity checks and reconciliation report.
+- `/summary.json` - pre-aggregated rollups by model, workspace, thread, and tool.
+- `/data/catalog.json` - dataset metadata and generated CSV inventory.
+
 ---
 
 ## What It Shows
@@ -67,6 +73,7 @@ model_audit_mini_app/
 ├── model_audit_local_app.py     # HTTP server, JSONL parser, CSV writer
 ├── metrics_audit.py             # Audit checks and reconciliation logic
 ├── model_audit_dashboard.html   # Frontend dashboard (served at /)
+├── model_audit_summary.json     # Generated rollup summary API artifact
 ├── run_model_audit_dashboard.sh # Shell launcher
 ├── test_model_audit_local_app.py
 └── data/                        # Generated at runtime, not committed

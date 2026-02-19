@@ -8,6 +8,7 @@ from model_audit_mini_app import model_audit_local_app as app_module
 from model_audit_mini_app.metrics_audit import build_usage_audit_report
 from model_audit_mini_app.model_audit_local_app import (
     AUDIT_JSON_NAME,
+    SUMMARY_JSON_NAME,
     AuditAppContext,
     CSV_HEADERS,
     DATA_CATALOG_NAME,
@@ -332,6 +333,14 @@ def test_refresh_writes_audit_json(tmp_path: Path) -> None:
     assert payload["status"] == "pass"
     assert payload["action_items"] == []
 
+    summary_path = reports / SUMMARY_JSON_NAME
+    assert summary_path.exists()
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary_payload["status"] == "ok"
+    assert summary_payload["counts"]["queries"] == 1
+    assert summary_payload["totals"]["total_tokens"] == 55
+    assert summary_payload["audit_status"] == "pass"
+
     data_dir = reports / DATA_DIR_NAME
     assert data_dir.exists()
     for spec in DATASET_SPECS.values():
@@ -399,3 +408,96 @@ def test_refresh_keeps_only_latest_31_days(tmp_path: Path) -> None:
     assert all(row["thread_id"] == "thread-new" for row in usage_data)
     assert query_data
     assert all(row["thread_id"] == "thread-new" for row in query_data)
+
+
+def test_refresh_writes_summary_rollups(tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    log_file = sessions / "rollout.jsonl"
+    log_file.write_text(
+        "\n".join(
+            [
+                '{"type":"session_meta","timestamp":"2026-02-17T01:00:00Z","payload":{"id":"thread-rollup"}}',
+                '{"type":"turn_context","timestamp":"2026-02-17T01:00:01Z","payload":{"model":"gpt-5.3-codex","cwd":"/repo-rollup","sandbox_policy":{"mode":"workspace-write"},"approval_policy":"never"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:02Z","payload":{"type":"user_message","message":"first question"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:03Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":100,"output_tokens":20,"total_tokens":120}}}}',
+                '{"type":"response_item","timestamp":"2026-02-17T01:00:04Z","payload":{"type":"function_call","name":"shell","call_id":"call_1"}}',
+                '{"type":"response_item","timestamp":"2026-02-17T01:00:05Z","payload":{"type":"function_call_output","call_id":"call_1","output":"{\\"metadata\\":{\\"duration_seconds\\":0.2}}"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:06Z","payload":{"type":"user_message","message":"second question"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:07Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":40,"output_tokens":10,"total_tokens":50}}}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    html_path = reports / "model_audit_dashboard.html"
+    html_path.write_text(
+        "<html>__DATA_BASE_PATH__ __AUDIT_JSON_RELATIVE_PATH__</html>",
+        encoding="utf-8",
+    )
+
+    app_context = AuditAppContext(sessions_dir=sessions, reports_dir=reports)
+    app_context.refresh_csv()
+
+    summary_path = reports / SUMMARY_JSON_NAME
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    assert payload["status"] == "ok"
+    assert payload["counts"]["threads"] == 1
+    assert payload["counts"]["queries"] == 2
+    assert payload["counts"]["models"] == 1
+    assert payload["counts"]["workspaces"] == 1
+    assert payload["counts"]["tool_calls"] == 1
+    assert payload["totals"]["total_tokens"] == 170
+
+    by_model = next(item for item in payload["by_model"] if item["model"] == "gpt-5.3-codex")
+    assert by_model["token_count"] == 170
+    assert by_model["query_count"] == 2
+    assert by_model["tool_call_count"] == 1
+
+    by_workspace = next(item for item in payload["by_workspace"] if item["cwd"] == "/repo-rollup")
+    assert by_workspace["token_count"] == 170
+    assert by_workspace["query_count"] == 2
+    assert by_workspace["tool_call_count"] == 1
+
+    by_tool = next(item for item in payload["by_tool"] if item["tool_name"] == "shell")
+    assert by_tool["call_count"] == 1
+    assert by_tool["total_duration_ms"] == 200
+    assert by_tool["avg_duration_ms"] == 200
+    assert by_tool["p95_duration_ms"] == 200
+
+
+def test_ensure_data_rebuilds_missing_summary_artifact(tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    log_file = sessions / "rollout.jsonl"
+    log_file.write_text(
+        "\n".join(
+            [
+                '{"type":"session_meta","timestamp":"2026-02-17T01:00:00Z","payload":{"id":"thread-summary-rebuild"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:01Z","payload":{"type":"user_message","message":"q1"}}',
+                '{"type":"event_msg","timestamp":"2026-02-17T01:00:02Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":10,"output_tokens":5,"total_tokens":15}}}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    html_path = reports / "model_audit_dashboard.html"
+    html_path.write_text(
+        "<html>__DATA_BASE_PATH__ __AUDIT_JSON_RELATIVE_PATH__</html>",
+        encoding="utf-8",
+    )
+
+    app_context = AuditAppContext(sessions_dir=sessions, reports_dir=reports)
+    app_context.refresh_csv()
+
+    summary_path = reports / SUMMARY_JSON_NAME
+    summary_path.unlink()
+    assert not summary_path.exists()
+
+    app_context.ensure_data()
+    assert summary_path.exists()
