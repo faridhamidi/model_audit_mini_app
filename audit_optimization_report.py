@@ -8,11 +8,11 @@ from typing import Any
 try:
     from .audit_constants import NUMERIC_PATTERN, QUERY_INDEX_PATTERN, SPACE_PATTERN, UUID_PATTERN
     from .audit_types import AuditEventRow
-    from .audit_utils import as_utc_iso
+    from .audit_utils import as_local_iso, as_utc_iso, local_timezone_name
 except ImportError:  # pragma: no cover - support direct script execution
     from audit_constants import NUMERIC_PATTERN, QUERY_INDEX_PATTERN, SPACE_PATTERN, UUID_PATTERN
     from audit_types import AuditEventRow
-    from audit_utils import as_utc_iso
+    from audit_utils import as_local_iso, as_utc_iso, local_timezone_name
 
 
 def _normalize_query_signature(text: str) -> str:
@@ -90,7 +90,20 @@ def _opportunity_severity(estimated_token_savings: int) -> str:
     return "low"
 
 
+def _utc_iso_to_local_iso(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return as_local_iso(dt)
+
+
 def build_optimization_report(rows: list[AuditEventRow], *, generated_at_utc: str) -> dict[str, Any]:
+    generated_at_local = _utc_iso_to_local_iso(generated_at_utc) or generated_at_utc
+    timezone_name = local_timezone_name()
     thread_label_by_id: dict[str, str] = {}
     for row in rows:
         thread_id = str(row.thread_id or "unknown")
@@ -321,6 +334,9 @@ def build_optimization_report(rows: list[AuditEventRow], *, generated_at_utc: st
                 "bucket_utc": datetime.fromtimestamp(
                     int(sorted_buckets[idx]["ts"]) / 1000, tz=timezone.utc
                 ).isoformat().replace("+00:00", "Z"),
+                "bucket_local": as_local_iso(
+                    datetime.fromtimestamp(int(sorted_buckets[idx]["ts"]) / 1000, tz=timezone.utc)
+                ),
                 "total_tokens": current_total,
                 "baseline_mean_tokens": int(round(mean_history)),
                 "z_score": round(z_score, 2),
@@ -359,13 +375,21 @@ def build_optimization_report(rows: list[AuditEventRow], *, generated_at_utc: st
         opportunity["priority"] = idx
 
     time_window = {"start_utc": "", "end_utc": ""}
+    time_window_local = {"start_local": "", "end_local": ""}
     if rows:
         time_window = {"start_utc": as_utc_iso(rows[0].timestamp), "end_utc": as_utc_iso(rows[-1].timestamp)}
+        time_window_local = {
+            "start_local": as_local_iso(rows[0].timestamp),
+            "end_local": as_local_iso(rows[-1].timestamp),
+        }
 
     return {
         "status": "ok",
         "generated_at_utc": generated_at_utc,
+        "generated_at_local": generated_at_local,
+        "timezone": timezone_name,
         "time_window": time_window,
+        "time_window_local": time_window_local,
         "summary": {
             "opportunity_count": len(opportunities),
             "estimated_total_token_savings": sum(int(item["estimated_token_savings"]) for item in opportunities),

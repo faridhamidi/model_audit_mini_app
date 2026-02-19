@@ -26,10 +26,12 @@ try:
         HTML_NAME,
         OPPORTUNITIES_JSON_NAME,
         SUMMARY_JSON_NAME,
+        as_local_iso,
         as_utc_iso,
         build_optimization_report,
         build_usage_summary_report,
         extract_event_rows,
+        local_timezone_name,
         parse_timestamp,
         trim_rows_for_csv_budget,
         write_dataset_csvs_atomic,
@@ -46,10 +48,12 @@ except ImportError:  # pragma: no cover - support direct script execution
         HTML_NAME,
         OPPORTUNITIES_JSON_NAME,
         SUMMARY_JSON_NAME,
+        as_local_iso,
         as_utc_iso,
         build_optimization_report,
         build_usage_summary_report,
         extract_event_rows,
+        local_timezone_name,
         parse_timestamp,
         trim_rows_for_csv_budget,
         write_dataset_csvs_atomic,
@@ -118,8 +122,10 @@ class AuditAppContext:
                 self._last_refresh_completed_monotonic = time.monotonic()
 
     def refresh_csv(self) -> dict[str, Any]:
-        generated_at = datetime.now(timezone.utc)
+        generated_at = datetime.now(timezone.utc).astimezone()
         generated_at_utc = as_utc_iso(generated_at)
+        generated_at_local = as_local_iso(generated_at)
+        timezone_name = local_timezone_name(generated_at)
         rows = extract_event_rows(self.sessions_dir)
         rows, trim_stats = trim_rows_for_csv_budget(
             rows,
@@ -131,10 +137,19 @@ class AuditAppContext:
 
         latest_event_epoch_ms = 0
         latest_event_utc = str(trim_stats.get("latest_event_utc", ""))
+        latest_event_local = ""
         if latest_event_utc:
             latest_dt = parse_timestamp(latest_event_utc)
             if latest_dt is not None:
                 latest_event_epoch_ms = int(latest_dt.timestamp() * 1000)
+                latest_event_local = as_local_iso(latest_dt)
+
+        retention_cutoff_utc = str(trim_stats.get("retention_cutoff_utc", ""))
+        retention_cutoff_local = ""
+        if retention_cutoff_utc:
+            cutoff_dt = parse_timestamp(retention_cutoff_utc)
+            if cutoff_dt is not None:
+                retention_cutoff_local = as_local_iso(cutoff_dt)
 
         audit_report = build_usage_audit_report(rows=rows, generated_at_utc=generated_at_utc)
         self.audit_json_path.write_text(
@@ -158,12 +173,16 @@ class AuditAppContext:
 
         data_catalog = {
             "status": "ok",
+            "timezone": timezone_name,
             "generated_at_utc": generated_at_utc,
+            "generated_at_local": generated_at_local,
             "latest_event_utc": latest_event_utc,
+            "latest_event_local": latest_event_local,
             "latest_event_epoch_ms": latest_event_epoch_ms,
             "source_sessions_dir": str(self.sessions_dir),
             "max_retention_days": self.max_retention_days,
-            "retention_cutoff_utc": trim_stats["retention_cutoff_utc"],
+            "retention_cutoff_utc": retention_cutoff_utc,
+            "retention_cutoff_local": retention_cutoff_local,
             "datasets": list(dataset_meta.values()),
         }
         self.data_catalog_path.write_text(
@@ -185,11 +204,15 @@ class AuditAppContext:
             "rows_trimmed_by_age_limit": trim_stats["trimmed_by_age_limit"],
             "rows_trimmed_by_row_limit": trim_stats["trimmed_by_row_limit"],
             "max_retention_days": self.max_retention_days,
-            "retention_cutoff_utc": trim_stats["retention_cutoff_utc"],
+            "timezone": timezone_name,
+            "retention_cutoff_utc": retention_cutoff_utc,
+            "retention_cutoff_local": retention_cutoff_local,
             "latest_event_utc": trim_stats["latest_event_utc"],
+            "latest_event_local": latest_event_local,
             "max_csv_rows": self.max_csv_rows,
             "estimated_csv_bytes": total_data_bytes,
             "generated_at_utc": generated_at_utc,
+            "generated_at_local": generated_at_local,
             "source_sessions_dir": str(self.sessions_dir),
             "data_dir": str(self.data_dir),
             "data_catalog_path": str(self.data_catalog_path),
@@ -212,12 +235,15 @@ class AuditAppContext:
         text = self.html_path.read_text(encoding="utf-8")
         refresh_time = ""
         if self.last_refresh_meta:
-            refresh_time = str(self.last_refresh_meta.get("generated_at_utc", ""))
+            refresh_time = str(
+                self.last_refresh_meta.get("generated_at_local")
+                or self.last_refresh_meta.get("generated_at_utc", "")
+            )
         text = text.replace("__SOURCE_SESSIONS_DIR__", str(self.sessions_dir))
         text = text.replace("__DATA_BASE_PATH__", f"/{DATA_DIR_NAME}")
         text = text.replace("__AUDIT_JSON_RELATIVE_PATH__", "/audit.json")
         text = text.replace("__OPPORTUNITIES_JSON_RELATIVE_PATH__", "/opportunities.json")
-        text = text.replace("__LAST_REFRESH_UTC__", refresh_time)
+        text = text.replace("__LAST_REFRESH_LOCAL__", refresh_time)
         return text
 
     def ensure_data(self) -> dict[str, Any]:

@@ -31,6 +31,15 @@ def as_utc_iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def as_local_iso(dt: datetime) -> str:
+    return dt.astimezone().isoformat()
+
+
+def local_timezone_name(dt: datetime | None = None) -> str:
+    ref = dt if dt is not None else datetime.now().astimezone()
+    return str(ref.tzname() or "local")
+
+
 def normalize_sandbox_mode(policy: Any) -> str:
     if isinstance(policy, dict):
         return str(policy.get("type") or policy.get("mode") or "unknown")

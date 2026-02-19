@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Any
+
+try:
+    from .audit_utils import as_local_iso, local_timezone_name
+except ImportError:  # pragma: no cover - support direct script execution
+    from audit_utils import as_local_iso, local_timezone_name
 
 
 METRICS_VERSION = "v1.0"
@@ -46,7 +51,29 @@ def _timestamp_to_utc_string(value: Any) -> str:
     return str(value or "")
 
 
+def _timestamp_to_local_string(value: Any) -> str:
+    if hasattr(value, "astimezone"):
+        try:
+            return as_local_iso(value)
+        except Exception:  # noqa: BLE001
+            return str(value)
+    return str(value or "")
+
+
+def _utc_iso_to_local_iso(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return as_local_iso(dt)
+
+
 def build_usage_audit_report(rows: list[Any], generated_at_utc: str) -> dict[str, Any]:
+    generated_at_local = _utc_iso_to_local_iso(generated_at_utc) or generated_at_utc
+    timezone_name = local_timezone_name()
     token_rows = _iter_token_rows(rows)
     input_total = 0
     output_total = 0
@@ -110,6 +137,7 @@ def build_usage_audit_report(rows: list[Any], generated_at_utc: str) -> dict[str
                         "query_id": query_id or "unknown",
                         "thread_id": str(_field(row, "thread_id") or "unknown"),
                         "timestamp_utc": _timestamp_to_utc_string(_field(row, "timestamp")),
+                        "timestamp_local": _timestamp_to_local_string(_field(row, "timestamp")),
                         "delta": int(total_tokens_delta),
                         "raw_total": total_tokens_raw,
                         "recomputed_total": total_tokens_recomputed,
@@ -241,7 +269,8 @@ def build_usage_audit_report(rows: list[Any], generated_at_utc: str) -> dict[str
     return {
         "status": audit_status,
         "generated_at_utc": generated_at_utc,
-        "timezone": "UTC",
+        "generated_at_local": generated_at_local,
+        "timezone": timezone_name,
         "metrics_version": METRICS_VERSION,
         "total_tokens_policy": TOTAL_TOKENS_POLICY,
         "notes": {

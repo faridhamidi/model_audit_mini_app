@@ -124,7 +124,7 @@ tr:hover td{color:var(--text);background:rgba(255,255,255,.02)}
       <h1>Codex Usage Intelligence<br/>Dashboard</h1>
       <div class="masthead-sub">
         <span class="dot"></span>
-        <span>Last sync: <strong id="lastRefresh">__LAST_REFRESH_UTC__</strong></span>
+        <span>Last sync: <strong id="lastRefresh">__LAST_REFRESH_LOCAL__</strong></span>
         <span class="tag" title="__SOURCE_SESSIONS_DIR__">__SOURCE_SESSIONS_DIR__</span>
       </div>
     </div>
@@ -314,6 +314,14 @@ const INTERVALS=[6e4,12e4,3e5,6e5,9e5,18e5,36e5,72e5,144e5,216e5];
 const state={audit:null,opportunities:null,catalog:null,preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",usageAuditTab:"usage",selection:null,anchorMs:null,loadId:0,refreshInFlight:false,refreshCooldownUntilMs:0,refreshCooldownTimer:null};
 const charts={};
 const $=id=>document.getElementById(id);
+const DATE_TIME_FORMATTER=new Intl.DateTimeFormat(undefined,{
+  year:"numeric",
+  month:"short",
+  day:"numeric",
+  hour:"numeric",
+  minute:"2-digit",
+  second:"2-digit"
+});
 
 Chart.defaults.color="#6b7a8d";
 Chart.defaults.borderColor="rgba(255,255,255,.06)";
@@ -363,7 +371,19 @@ function applyRefreshCooldown(seconds){
   },remainingMs);
   updateRefreshButtonState();
 }
-function fmtLocal(ms){return new Date(ms).toLocaleString()}
+function fmtLocal(ms){
+  const d=new Date(ms);
+  if(Number.isNaN(d.getTime()))return String(ms||"");
+  return DATE_TIME_FORMATTER.format(d);
+}
+function fmtIsoLocal(value){
+  const raw=String(value||"").trim();
+  if(!raw)return "";
+  const normalized=raw.replace(/(\.\d{3})\d+/, "$1");
+  const d=new Date(normalized);
+  if(Number.isNaN(d.getTime()))return String(value||"");
+  return DATE_TIME_FORMATTER.format(d);
+}
 function fmtTime(ms,w){const d=new Date(ms);return w<=864e5?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})}
 function fmtDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+"m";const h=m/60;if(h<24)return(h%1?h.toFixed(1):h)+"h";const d=h/24;return(d%1?d.toFixed(1):d)+"d"}
 function fmtNum(n){if(!isFinite(n))return "0";return Math.round(n).toLocaleString()}
@@ -1204,7 +1224,7 @@ async function refresh(){
     }
     if(!r.ok||j.status!=="ok")throw new Error(j.message||"Refresh failed");
     applyRefreshCooldown(Number(j.refresh_cooldown_seconds||3));
-    $("lastRefresh").textContent=j.generated_at_utc||new Date().toISOString();
+    $("lastRefresh").textContent=fmtIsoLocal(j.generated_at_local||j.generated_at_utc||new Date().toISOString());
     const trimmed=Number(j.rows_trimmed_total||0);
     const trimTail=trimmed>0?(" · trimmed "+trimmed+" old rows"):"";
     const auditTail=j.audit_status?(" · audit "+String(j.audit_status).toUpperCase()):"";
@@ -1246,7 +1266,8 @@ function entrance(){
 
 function init(){
   const lr=$("lastRefresh");
-  if(!lr.textContent||lr.textContent.includes("__LAST_REFRESH"))lr.textContent="awaiting sync";
+  if(!lr.textContent||lr.textContent.includes("__LAST_REFRESH"))lr.textContent=fmtIsoLocal(new Date().toISOString());
+  else lr.textContent=fmtIsoLocal(lr.textContent);
   setUsageAuditTab(state.usageAuditTab);
   updateRefreshButtonState();
   bind();markPreset();entrance();loadWindowData(true,true);

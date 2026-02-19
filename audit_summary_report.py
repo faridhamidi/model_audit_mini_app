@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 try:
     from .audit_types import AuditEventRow
-    from .audit_utils import as_utc_iso
+    from .audit_utils import as_local_iso, as_utc_iso, local_timezone_name
 except ImportError:  # pragma: no cover - support direct script execution
     from audit_types import AuditEventRow
-    from audit_utils import as_utc_iso
+    from audit_utils import as_local_iso, as_utc_iso, local_timezone_name
 
 
 def _tool_duration_percentile_ms(sorted_durations: list[int], percentile: int) -> int:
@@ -24,18 +25,34 @@ def _tool_duration_percentile_ms(sorted_durations: list[int], percentile: int) -
     return sorted_durations[index]
 
 
+def _utc_iso_to_local_iso(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return as_local_iso(dt)
+
+
 def build_usage_summary_report(
     rows: list[AuditEventRow],
     *,
     generated_at_utc: str,
     audit_status: str,
 ) -> dict[str, Any]:
+    generated_at_local = _utc_iso_to_local_iso(generated_at_utc) or generated_at_utc
+    timezone_name = local_timezone_name()
     if not rows:
         return {
             "status": "ok",
             "generated_at_utc": generated_at_utc,
+            "generated_at_local": generated_at_local,
+            "timezone": timezone_name,
             "audit_status": audit_status,
             "time_window": {"start_utc": "", "end_utc": ""},
+            "time_window_local": {"start_local": "", "end_local": ""},
             "counts": {
                 "rows": 0,
                 "threads": 0,
@@ -102,11 +119,13 @@ def build_usage_summary_report(
                 "tool_call_count": 0,
                 "query_ids": set(),
                 "last_event_utc": "",
+                "last_event_local": "",
             },
         )
         if not thread_stat["thread_label"] and row.thread_label:
             thread_stat["thread_label"] = str(row.thread_label)
         thread_stat["last_event_utc"] = as_utc_iso(row.timestamp)
+        thread_stat["last_event_local"] = as_local_iso(row.timestamp)
 
         if query_id and query_id != "unknown":
             model_stat["query_ids"].add(query_id)
@@ -181,6 +200,7 @@ def build_usage_summary_report(
             "tool_call_count": int(stat["tool_call_count"]),
             "token_count": int(stat["token_count"]),
             "last_event_utc": str(stat["last_event_utc"] or ""),
+            "last_event_local": str(stat["last_event_local"] or ""),
         }
         for thread_id, stat in thread_rollup.items()
     ]
@@ -206,14 +226,19 @@ def build_usage_summary_report(
 
     start_utc = as_utc_iso(rows[0].timestamp)
     end_utc = as_utc_iso(rows[-1].timestamp)
+    start_local = as_local_iso(rows[0].timestamp)
+    end_local = as_local_iso(rows[-1].timestamp)
     query_count = len(query_ids)
     avg_tokens_per_query = (total_tokens / query_count) if query_count else 0.0
 
     return {
         "status": "ok",
         "generated_at_utc": generated_at_utc,
+        "generated_at_local": generated_at_local,
+        "timezone": timezone_name,
         "audit_status": audit_status,
         "time_window": {"start_utc": start_utc, "end_utc": end_utc},
+        "time_window_local": {"start_local": start_local, "end_local": end_local},
         "counts": {
             "rows": len(rows),
             "threads": len(thread_ids),

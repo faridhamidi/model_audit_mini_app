@@ -93,7 +93,8 @@ def main() -> int:
         f"trimmed={startup_meta['rows_trimmed_total']} "
         f"retention_days={startup_meta['max_retention_days']} "
         f"estimated_csv_bytes={startup_meta['estimated_csv_bytes']} "
-        f"generated_at={startup_meta['generated_at_utc']}"
+        f"generated_at={startup_meta.get('generated_at_local', startup_meta['generated_at_utc'])} "
+        f"timezone={startup_meta.get('timezone', 'local')}"
     )
     print(f"[model-audit] source sessions: {sessions_dir}")
     print(f"[model-audit] data dir: {app_context.data_dir}")

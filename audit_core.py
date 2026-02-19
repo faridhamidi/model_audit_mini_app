@@ -27,6 +27,7 @@ try:
     from .audit_summary_report import build_usage_summary_report
     from .audit_types import AuditEventRow
     from .audit_utils import (
+        as_local_iso,
         as_utc_iso,
         coerce_int,
         compact_text,
@@ -34,6 +35,7 @@ try:
         extract_response_message_text,
         list_session_log_files,
         load_thread_title_map,
+        local_timezone_name,
         make_thread_label,
         normalize_sandbox_mode,
         open_session_log_text,
@@ -65,6 +67,7 @@ except ImportError:  # pragma: no cover - support direct script execution
     from audit_summary_report import build_usage_summary_report
     from audit_types import AuditEventRow
     from audit_utils import (
+        as_local_iso,
         as_utc_iso,
         coerce_int,
         compact_text,
@@ -72,6 +75,7 @@ except ImportError:  # pragma: no cover - support direct script execution
         extract_response_message_text,
         list_session_log_files,
         load_thread_title_map,
+        local_timezone_name,
         make_thread_label,
         normalize_sandbox_mode,
         open_session_log_text,
