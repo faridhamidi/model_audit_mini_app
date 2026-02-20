@@ -3,12 +3,12 @@
 
 set -Eeuo pipefail
 
-APP_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="${APP_DIR}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HOST="127.0.0.1"
 PORT="8765"
 SESSIONS_DIR="${HOME}/.codex/sessions"
-REPORTS_DIR="${APP_DIR}"
+REPORTS_DIR="${REPO_ROOT}/reports"
 MAX_RETENTION_DAYS="31"
 MAX_CSV_ROWS="0"
 
@@ -84,7 +84,7 @@ if [[ -x "${REPO_ROOT}/.venv/bin/python" ]]; then
   PYTHON_BIN="${REPO_ROOT}/.venv/bin/python"
 fi
 
-exec "${PYTHON_BIN}" "${APP_DIR}/main.py" \
+exec "${PYTHON_BIN}" "${REPO_ROOT}/main.py" \
   --host "${HOST}" \
   --port "${PORT}" \
   --sessions-dir "${SESSIONS_DIR}" \

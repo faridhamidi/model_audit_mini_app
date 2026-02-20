@@ -4,35 +4,28 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-try:
-    from .audit_core import (
-        AUDIT_JSON_NAME,
-        DATA_DIR_NAME,
-        DEFAULT_MAX_CSV_ROWS,
-        DEFAULT_MAX_RETENTION_DAYS,
-        HTML_NAME,
-        OPPORTUNITIES_JSON_NAME,
-        SUMMARY_JSON_NAME,
-    )
-    from .audit_server import AuditAppContext, AuditDashboardHandler
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_core import (  # type: ignore[no-redef]
-        AUDIT_JSON_NAME,
-        DATA_DIR_NAME,
-        DEFAULT_MAX_CSV_ROWS,
-        DEFAULT_MAX_RETENTION_DAYS,
-        HTML_NAME,
-        OPPORTUNITIES_JSON_NAME,
-        SUMMARY_JSON_NAME,
-    )
-    from audit_server import AuditAppContext, AuditDashboardHandler  # type: ignore[no-redef]
+MODULES_DIR = Path(__file__).resolve().parent / "modules"
+if str(MODULES_DIR) not in sys.path:
+    sys.path.insert(0, str(MODULES_DIR))
+
+from model_audit_mini_app.audit_core import (
+    AUDIT_JSON_NAME,
+    DATA_DIR_NAME,
+    DEFAULT_MAX_CSV_ROWS,
+    DEFAULT_MAX_RETENTION_DAYS,
+    HTML_NAME,
+    OPPORTUNITIES_JSON_NAME,
+    SUMMARY_JSON_NAME,
+)
+from model_audit_mini_app.audit_server import AuditAppContext, AuditDashboardHandler
 
 
 def parse_args() -> argparse.Namespace:
-    default_reports_dir = Path(__file__).resolve().parent
+    default_reports_dir = Path(__file__).resolve().parent / "reports"
     parser = argparse.ArgumentParser(
         description="Run local model audit mini app (typed CSV-backed dashboard).",
     )
