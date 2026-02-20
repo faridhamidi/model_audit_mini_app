@@ -314,6 +314,7 @@ const INTERVALS=[6e4,12e4,3e5,6e5,9e5,18e5,36e5,72e5,144e5,216e5];
 const state={audit:null,opportunities:null,catalog:null,preset:"7d",windowMs:PRESETS["7d"].ms,mode:"preset",bucketMs:PRESETS["7d"].max,activeTab:"usage",usageAuditTab:"usage",selection:null,anchorMs:null,loadId:0,refreshInFlight:false,refreshCooldownUntilMs:0,refreshCooldownTimer:null};
 const charts={};
 const $=id=>document.getElementById(id);
+const DATE_FORMATTER_CACHE=new Map();
 const DATE_TIME_FORMATTER=new Intl.DateTimeFormat(undefined,{
   year:"numeric",
   month:"short",
@@ -384,7 +385,43 @@ function fmtIsoLocal(value){
   if(Number.isNaN(d.getTime()))return String(value||"");
   return DATE_TIME_FORMATTER.format(d);
 }
-function fmtTime(ms,w){const d=new Date(ms);return w<=864e5?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})}
+function getDateFormatter(options){
+  const key=JSON.stringify(options);
+  if(!DATE_FORMATTER_CACHE.has(key))DATE_FORMATTER_CACHE.set(key,new Intl.DateTimeFormat(undefined,options));
+  return DATE_FORMATTER_CACHE.get(key);
+}
+function fmtWithOptions(ms,options){
+  const d=new Date(ms);
+  if(Number.isNaN(d.getTime()))return String(ms||"");
+  return getDateFormatter(options).format(d);
+}
+function bucketTickOptions(bucketMs){
+  if(bucketMs<=18e5)return{hour:"numeric",minute:"2-digit"};
+  if(bucketMs<=36e5)return{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"};
+  return{month:"short",day:"numeric",hour:"numeric"};
+}
+function fmtBucketTick(ms,bucketMs){return fmtWithOptions(ms,bucketTickOptions(bucketMs))}
+function fmtBucketRange(ms,bucketMs){
+  const endMs=Math.max(ms,ms+bucketMs-1);
+  const startDay=fmtWithOptions(ms,{year:"numeric",month:"short",day:"numeric"});
+  const endDay=fmtWithOptions(endMs,{year:"numeric",month:"short",day:"numeric"});
+  const startTime=fmtWithOptions(ms,{hour:"numeric",minute:"2-digit"});
+  const endTime=fmtWithOptions(endMs,{hour:"numeric",minute:"2-digit"});
+  if(startDay===endDay)return`${startDay}, ${startTime} - ${endTime} (${fmtDur(bucketMs)} bucket)`;
+  const startFull=fmtWithOptions(ms,{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  const endFull=fmtWithOptions(endMs,{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  return`${startFull} - ${endFull} (${fmtDur(bucketMs)} bucket)`;
+}
+function buildBucketAxis(buckets,bucketMs){
+  const points=buckets.map(b=>b.ts);
+  return{
+    labels:points.map(ts=>fmtBucketTick(ts,bucketMs)),
+    tooltipTitleAt:index=>{
+      const ts=points[index];
+      return ts==null?"":fmtBucketRange(ts,bucketMs);
+    }
+  };
+}
 function fmtDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+"m";const h=m/60;if(h<24)return(h%1?h.toFixed(1):h)+"h";const d=h/24;return(d%1?d.toFixed(1):d)+"d"}
 function fmtNum(n){if(!isFinite(n))return "0";return Math.round(n).toLocaleString()}
 function fmtPct(v){if(!isFinite(v))return "0%";return (v*100).toFixed(1)+"%"}
@@ -466,16 +503,23 @@ function drawGroupedBars(canvasId,rows,emptyText){
   });
 }
 
-function drawLineStack(canvasId,labels,datasets,emptyText){
+function drawLineStack(canvasId,labels,datasets,emptyText,tooltipTitleAt){
   if(!datasets.length||!labels.length){
     getOrCreate(canvasId,"line",{data:{labels:[],datasets:[]},options:{plugins:{title:{display:true,text:emptyText,color:"#3d4a5c",font:{size:14}}}}});
     return;
   }
+  const tooltipCallbacks=tooltipTitleAt?{
+    title:items=>{
+      if(!items||!items.length)return "";
+      return tooltipTitleAt(items[0].dataIndex);
+    }
+  }:undefined;
   getOrCreate(canvasId,"line",{
     data:{labels,datasets},
     options:{
       responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
-      scales:{x:{grid:{color:"rgba(255,255,255,.04)"}},y:{stacked:true,beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}}}
+      scales:{x:{grid:{color:"rgba(255,255,255,.04)"}},y:{stacked:true,beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}}},
+      plugins:tooltipCallbacks?{tooltip:{callbacks:tooltipCallbacks}}:undefined
     }
   });
 }
@@ -584,12 +628,12 @@ function drawRoutingTimeseries(buckets,models){
     leg.innerHTML="";
     return;
   }
-  const labels=buckets.map(b=>fmtTime(b.ts,state.windowMs));
+  const axis=buildBucketAxis(buckets,state.bucketMs);
   const datasets=models.map((m,i)=>({
     label:m,fill:true,data:buckets.map(b=>b.byModel.get(m)||0),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+"22",
     borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3
   }));
-  drawLineStack("timeseriesCanvas",labels,datasets,"No data");
+  drawLineStack("timeseriesCanvas",axis.labels,datasets,"No data",axis.tooltipTitleAt);
   renderLegend(leg,models.map((m,i)=>({label:m,color:COLORS[i%COLORS.length]})));
 }
 
@@ -662,7 +706,7 @@ function aggregateTokenDimensions(tokenRows){
   return{workspace,thread,conversation,query};
 }
 
-function drawTopNTrend(canvasId,legendId,buckets,keyAccessor,labelFmt,emptyText){
+function drawTopNTrend(canvasId,legendId,buckets,bucketMs,keyAccessor,labelFmt,emptyText){
   if(!buckets.length){
     drawLineStack(canvasId,[],[],emptyText);
     const leg=$(legendId);if(leg)leg.innerHTML="";
@@ -674,11 +718,11 @@ function drawTopNTrend(canvasId,legendId,buckets,keyAccessor,labelFmt,emptyText)
     map.forEach((v,k)=>totals.set(k,(totals.get(k)||0)+v));
   }
   const top=[...totals.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
-  const labels=buckets.map(b=>fmtTime(b.ts,state.windowMs));
+  const axis=buildBucketAxis(buckets,bucketMs);
   const datasets=top.map((k,i)=>({label:labelFmt(k),data:buckets.map(b=>keyAccessor(b).get(k)||0),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+"22",fill:true,tension:.3,pointRadius:0,borderWidth:2}));
   const otherData=buckets.map(b=>{let s=0;keyAccessor(b).forEach((v,k)=>{if(!top.includes(k))s+=v});return s});
   if(otherData.some(v=>v>0))datasets.push({label:"Other",data:otherData,borderColor:"#6b7a8d",backgroundColor:"rgba(107,122,141,.2)",fill:true,tension:.3,pointRadius:0,borderWidth:2});
-  drawLineStack(canvasId,labels,datasets,emptyText);
+  drawLineStack(canvasId,axis.labels,datasets,emptyText,axis.tooltipTitleAt);
   const leg=$(legendId);if(leg)renderLegend(leg,datasets.map((d,i)=>({label:d.label,color:d.borderColor||COLORS[i%COLORS.length]})));
 }
 
@@ -975,14 +1019,15 @@ function renderUsage(sel){
   }
 
   const buckets=bucketTokenRows(tokenRows,sel.startMs,sel.bucketMs);
-  const labels=buckets.map(b=>fmtTime(b.ts,state.windowMs));
+  const axis=buildBucketAxis(buckets,sel.bucketMs);
+  const labels=axis.labels;
   const tokenDatasets=[
     {label:"Input",data:buckets.map(b=>b.input),borderColor:COLORS[0],backgroundColor:COLORS[0]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2},
     {label:"Output",data:buckets.map(b=>b.output),borderColor:COLORS[1],backgroundColor:COLORS[1]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2},
     {label:"Cached Input",data:buckets.map(b=>b.cached),borderColor:COLORS[2],backgroundColor:COLORS[2]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2},
     {label:"Reasoning Output",data:buckets.map(b=>b.reasoning),borderColor:COLORS[3],backgroundColor:COLORS[3]+"22",fill:true,tension:.25,pointRadius:0,borderWidth:2}
   ];
-  drawLineStack("usageTokenTrendCanvas",labels,tokenDatasets,"No token events in window");
+  drawLineStack("usageTokenTrendCanvas",labels,tokenDatasets,"No token events in window",axis.tooltipTitleAt);
   renderLegend($("usageTokenTrendLegend"),tokenDatasets.map(d=>({label:d.label,color:d.borderColor})));
   drawDoughnut(
     "usageIoShareCanvas",
@@ -994,8 +1039,8 @@ function renderUsage(sel){
     "No token events in window"
   );
 
-  drawTopNTrend("usageWorkspaceTrendCanvas","usageWorkspaceTrendLegend",buckets,b=>b.byWorkspace,v=>v,"No token events in window");
-  drawTopNTrend("usageThreadTrendCanvas","usageThreadTrendLegend",buckets,b=>b.byThread,threadName,"No token events in window");
+  drawTopNTrend("usageWorkspaceTrendCanvas","usageWorkspaceTrendLegend",buckets,sel.bucketMs,b=>b.byWorkspace,v=>v,"No token events in window");
+  drawTopNTrend("usageThreadTrendCanvas","usageThreadTrendLegend",buckets,sel.bucketMs,b=>b.byThread,threadName,"No token events in window");
 
   const workspaceRows=[...dims.workspace.entries()].map(([k,v])=>({
     key:k,total:v.total,input:v.input,output:v.output,cache:v.cached/Math.max(v.input,1)
@@ -1039,11 +1084,15 @@ function renderUsage(sel){
     }
   }
   const spikeColors=buckets.map(b=>spikes.some(s=>s.ts===b.ts)?"#f472b6":"#38bdf8");
+  const spikeTooltipTitle=items=>{
+    if(!items||!items.length)return "";
+    return axis.tooltipTitleAt(items[0].dataIndex);
+  };
   getOrCreate("spikeSparkCanvas","line",{
     data:{labels:labels,datasets:[{label:"Total Tokens",data:bucketTotals,borderColor:"#38bdf8",backgroundColor:"rgba(56,189,248,.15)",fill:true,pointBackgroundColor:spikeColors,pointRadius:2,tension:.25,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{display:false},y:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}}}}
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{display:false},y:{beginAtZero:true,grid:{color:"rgba(255,255,255,.04)"}}},plugins:{tooltip:{callbacks:{title:spikeTooltipTitle}}}}
   });
-  tableRows("spikeBody",spikes.slice(0,30).map(s=>`<tr><td>${esc(fmtLocal(s.ts))}</td><td>${fmtNum(s.total)}</td><td>${fmtNum(s.mean)}</td><td>${s.z===999?"inf":s.z.toFixed(2)}</td><td>${esc(s.workspace)}</td><td>${esc(s.thread)}</td></tr>`),6);
+  tableRows("spikeBody",spikes.slice(0,30).map(s=>`<tr><td>${esc(fmtBucketRange(s.ts,sel.bucketMs))}</td><td>${fmtNum(s.total)}</td><td>${fmtNum(s.mean)}</td><td>${s.z===999?"inf":s.z.toFixed(2)}</td><td>${esc(s.workspace)}</td><td>${esc(s.thread)}</td></tr>`),6);
 
   const byThreadQueryInput=new Map();
   tokenRows.forEach(r=>{
