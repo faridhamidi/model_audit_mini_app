@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launcher for local model audit mini app.
+# Launcher for codex-observatory.
 
 set -Eeuo pipefail
 

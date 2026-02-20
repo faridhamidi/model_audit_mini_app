@@ -27,7 +27,7 @@ from app_http_server import AuditAppContext, AuditDashboardHandler
 def parse_args() -> argparse.Namespace:
     default_reports_dir = Path(__file__).resolve().parent / "reports"
     parser = argparse.ArgumentParser(
-        description="Run local model audit mini app (typed CSV-backed dashboard).",
+        description="Run codex-observatory (typed CSV-backed dashboard).",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8765, help="Bind port (default: 8765)")
@@ -81,7 +81,7 @@ def main() -> int:
 
     startup_meta = app_context.refresh_csv()
     print(
-        "[model-audit] startup refresh: "
+        "[codex-observatory] startup refresh: "
         f"rows={startup_meta['rows_written']} "
         f"trimmed={startup_meta['rows_trimmed_total']} "
         f"retention_days={startup_meta['max_retention_days']} "
@@ -89,13 +89,13 @@ def main() -> int:
         f"generated_at={startup_meta.get('generated_at_local', startup_meta['generated_at_utc'])} "
         f"timezone={startup_meta.get('timezone', 'local')}"
     )
-    print(f"[model-audit] source sessions: {sessions_dir}")
-    print(f"[model-audit] data dir: {app_context.data_dir}")
+    print(f"[codex-observatory] source sessions: {sessions_dir}")
+    print(f"[codex-observatory] data dir: {app_context.data_dir}")
 
     server = ThreadingHTTPServer((args.host, args.port), AuditDashboardHandler)
     server.app_context = app_context  # type: ignore[attr-defined]
 
-    print(f"[model-audit] serving at http://{args.host}:{args.port}/")
+    print(f"[codex-observatory] serving at http://{args.host}:{args.port}/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

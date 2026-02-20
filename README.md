@@ -1,4 +1,4 @@
-# model_audit_mini_app
+# codex-observatory
 
 Local dashboard for auditing Codex session usage: model routing, token usage, tool calls, and optimization opportunities.
 
