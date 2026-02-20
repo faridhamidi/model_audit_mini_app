@@ -5,14 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-try:
-    from .audit_constants import NUMERIC_PATTERN, QUERY_INDEX_PATTERN, SPACE_PATTERN, UUID_PATTERN
-    from .audit_types import AuditEventRow
-    from .audit_utils import as_local_iso, as_utc_iso, local_timezone_name
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_constants import NUMERIC_PATTERN, QUERY_INDEX_PATTERN, SPACE_PATTERN, UUID_PATTERN
-    from audit_types import AuditEventRow
-    from audit_utils import as_local_iso, as_utc_iso, local_timezone_name
+from schema_constants import NUMERIC_PATTERN, QUERY_INDEX_PATTERN, SPACE_PATTERN, UUID_PATTERN
+from schema_event_types import AuditEventRow
+from shared_parsing_utils import as_local_iso, as_utc_iso, local_timezone_name
 
 
 def _normalize_query_signature(text: str) -> str:

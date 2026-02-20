@@ -12,7 +12,7 @@ MODULES_DIR = Path(__file__).resolve().parent / "modules"
 if str(MODULES_DIR) not in sys.path:
     sys.path.insert(0, str(MODULES_DIR))
 
-from model_audit_mini_app.audit_core import (
+from schema_constants import (
     AUDIT_JSON_NAME,
     DATA_DIR_NAME,
     DEFAULT_MAX_CSV_ROWS,
@@ -21,7 +21,7 @@ from model_audit_mini_app.audit_core import (
     OPPORTUNITIES_JSON_NAME,
     SUMMARY_JSON_NAME,
 )
-from model_audit_mini_app.audit_server import AuditAppContext, AuditDashboardHandler
+from app_http_server import AuditAppContext, AuditDashboardHandler
 
 
 def parse_args() -> argparse.Namespace:

@@ -7,23 +7,22 @@ from pathlib import Path
 
 import pytest
 
-from model_audit_mini_app import audit_parser as parser_module
-from model_audit_mini_app.audit_core import (
+import ingest_session_parser as parser_module
+from schema_constants import (
     AUDIT_JSON_NAME,
-    OPPORTUNITIES_JSON_NAME,
-    SUMMARY_JSON_NAME,
     CSV_HEADERS,
     DATA_CATALOG_NAME,
     DATA_DIR_NAME,
     DATASET_SPECS,
-    build_optimization_report,
-    load_thread_title_map,
-    parse_timestamp,
-    write_csv_atomic,
+    OPPORTUNITIES_JSON_NAME,
+    SUMMARY_JSON_NAME,
 )
-from model_audit_mini_app.metrics_audit import build_usage_audit_report
-from model_audit_mini_app.audit_parser import extract_event_rows
-from model_audit_mini_app.audit_server import AuditAppContext, RefreshCooldownError
+from export_csv_datasets import write_csv_atomic
+from ingest_session_parser import extract_event_rows
+from metrics_usage_reconciliation import build_usage_audit_report
+from report_optimization_opportunities import build_optimization_report
+from shared_parsing_utils import load_thread_title_map, parse_timestamp
+from app_http_server import AuditAppContext, RefreshCooldownError
 
 
 def test_parse_timestamp_accepts_zulu() -> None:
@@ -411,7 +410,7 @@ def test_refresh_guard_blocks_immediate_repeat(monkeypatch, tmp_path: Path) -> N
 
     monotonic_values = iter([100.0, 100.5, 101.0])
     monkeypatch.setattr(
-        "model_audit_mini_app.audit_server.time.monotonic",
+        "app_http_server.time.monotonic",
         lambda: next(monotonic_values),
     )
 
@@ -447,7 +446,7 @@ def test_refresh_guard_allows_after_cooldown(monkeypatch, tmp_path: Path) -> Non
 
     monotonic_values = iter([200.0, 200.5, 204.0, 204.5])
     monkeypatch.setattr(
-        "model_audit_mini_app.audit_server.time.monotonic",
+        "app_http_server.time.monotonic",
         lambda: next(monotonic_values),
     )
 

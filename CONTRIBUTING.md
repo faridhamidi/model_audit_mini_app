@@ -19,5 +19,5 @@ python3 -m pip install -r requirements/dev.txt
 ## Coding Notes
 
 - Prefer small, composable functions in the existing modules.
-- Keep typed CSV schemas in `modules/model_audit_mini_app/audit_constants.py` and related parser logic in `modules/model_audit_mini_app/audit_parser.py`.
+- Keep typed CSV schemas in `modules/schema_constants.py` and related parser logic in `modules/ingest_session_parser.py`.
 - Ensure backward-compatible API payloads unless a breaking change is explicitly intended.

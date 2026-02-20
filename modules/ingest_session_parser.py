@@ -6,38 +6,21 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-try:
-    from .audit_constants import MAX_QUERY_TEXT_CHARS
-    from .audit_types import AuditEventRow
-    from .audit_utils import (
-        compact_text,
-        coerce_int,
-        derive_thread_id_from_log_file,
-        extract_response_message_text,
-        list_session_log_files,
-        load_thread_title_map,
-        make_thread_label,
-        normalize_sandbox_mode,
-        open_session_log_text,
-        parse_timestamp,
-        parse_tool_duration_ms,
-    )
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_constants import MAX_QUERY_TEXT_CHARS
-    from audit_types import AuditEventRow
-    from audit_utils import (
-        compact_text,
-        coerce_int,
-        derive_thread_id_from_log_file,
-        extract_response_message_text,
-        list_session_log_files,
-        load_thread_title_map,
-        make_thread_label,
-        normalize_sandbox_mode,
-        open_session_log_text,
-        parse_timestamp,
-        parse_tool_duration_ms,
-    )
+from schema_constants import MAX_QUERY_TEXT_CHARS
+from schema_event_types import AuditEventRow
+from shared_parsing_utils import (
+    compact_text,
+    coerce_int,
+    derive_thread_id_from_log_file,
+    extract_response_message_text,
+    list_session_log_files,
+    load_thread_title_map,
+    make_thread_label,
+    normalize_sandbox_mode,
+    open_session_log_text,
+    parse_timestamp,
+    parse_tool_duration_ms,
+)
 
 
 def extract_event_rows(

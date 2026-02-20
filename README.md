@@ -36,7 +36,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -U pip
 python3 -m pip install -r requirements/dev.txt
-./scripts/run_model_audit_dashboard.sh
+./scripts/start_model_audit_server.sh
 ```
 
 Open [http://127.0.0.1:8765](http://127.0.0.1:8765).
@@ -44,7 +44,7 @@ Open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 ## CLI Options
 
 ```bash
-./scripts/run_model_audit_dashboard.sh \
+./scripts/start_model_audit_server.sh \
   -p 8765 \
   -h 127.0.0.1 \
   -s ~/.codex/sessions \
@@ -71,9 +71,9 @@ python3 -m pytest
 ## Project Structure
 
 - `main.py`: root CLI entrypoint
-- `modules/model_audit_mini_app/`: application modules and submodules
+- `modules/`: application modules
 - `tests/`: pytest suite
-- `scripts/run_model_audit_dashboard.sh`: local launcher
+- `scripts/start_model_audit_server.sh`: local launcher
 - `requirements/dev.txt`: development dependencies
 - `reports/`: dashboard HTML and generated JSON/CSV artifacts
 - `docs/screenshots/`: README screenshots

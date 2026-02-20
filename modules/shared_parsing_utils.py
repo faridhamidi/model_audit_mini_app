@@ -8,10 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-try:
-    from .audit_constants import CODEX_GLOBAL_STATE_PATH
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_constants import CODEX_GLOBAL_STATE_PATH
+from schema_constants import CODEX_GLOBAL_STATE_PATH
 
 
 def parse_timestamp(value: str | None) -> datetime | None:

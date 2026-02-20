@@ -5,12 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-try:
-    from .audit_types import AuditEventRow
-    from .audit_utils import as_local_iso, as_utc_iso, local_timezone_name
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_types import AuditEventRow
-    from audit_utils import as_local_iso, as_utc_iso, local_timezone_name
+from schema_event_types import AuditEventRow
+from shared_parsing_utils import as_local_iso, as_utc_iso, local_timezone_name
 
 
 def _tool_duration_percentile_ms(sorted_durations: list[int], percentile: int) -> int:

@@ -6,10 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-try:
-    from .audit_utils import as_local_iso, local_timezone_name
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_utils import as_local_iso, local_timezone_name
+from shared_parsing_utils import as_local_iso, local_timezone_name
 
 
 METRICS_VERSION = "v1.0"

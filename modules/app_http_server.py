@@ -15,50 +15,23 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-try:
-    from .audit_core import (
-        AUDIT_JSON_NAME,
-        DATASET_SPECS,
-        DATA_CATALOG_NAME,
-        DATA_DIR_NAME,
-        DEFAULT_MAX_CSV_ROWS,
-        DEFAULT_MAX_RETENTION_DAYS,
-        HTML_NAME,
-        OPPORTUNITIES_JSON_NAME,
-        SUMMARY_JSON_NAME,
-        as_local_iso,
-        as_utc_iso,
-        build_optimization_report,
-        build_usage_summary_report,
-        extract_event_rows,
-        local_timezone_name,
-        parse_timestamp,
-        trim_rows_for_csv_budget,
-        write_dataset_csvs_atomic,
-    )
-    from .metrics_audit import build_usage_audit_report
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_core import (  # type: ignore[no-redef]
-        AUDIT_JSON_NAME,
-        DATASET_SPECS,
-        DATA_CATALOG_NAME,
-        DATA_DIR_NAME,
-        DEFAULT_MAX_CSV_ROWS,
-        DEFAULT_MAX_RETENTION_DAYS,
-        HTML_NAME,
-        OPPORTUNITIES_JSON_NAME,
-        SUMMARY_JSON_NAME,
-        as_local_iso,
-        as_utc_iso,
-        build_optimization_report,
-        build_usage_summary_report,
-        extract_event_rows,
-        local_timezone_name,
-        parse_timestamp,
-        trim_rows_for_csv_budget,
-        write_dataset_csvs_atomic,
-    )
-    from metrics_audit import build_usage_audit_report  # type: ignore[no-redef]
+from schema_constants import (
+    AUDIT_JSON_NAME,
+    DATASET_SPECS,
+    DATA_CATALOG_NAME,
+    DATA_DIR_NAME,
+    DEFAULT_MAX_CSV_ROWS,
+    DEFAULT_MAX_RETENTION_DAYS,
+    HTML_NAME,
+    OPPORTUNITIES_JSON_NAME,
+    SUMMARY_JSON_NAME,
+)
+from export_csv_datasets import trim_rows_for_csv_budget, write_dataset_csvs_atomic
+from ingest_session_parser import extract_event_rows
+from metrics_usage_reconciliation import build_usage_audit_report
+from report_optimization_opportunities import build_optimization_report
+from report_usage_summary import build_usage_summary_report
+from shared_parsing_utils import as_local_iso, as_utc_iso, local_timezone_name, parse_timestamp
 
 
 REFRESH_COOLDOWN_SECONDS = 3

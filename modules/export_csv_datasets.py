@@ -8,14 +8,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-try:
-    from .audit_constants import CSV_HEADERS, DATASET_SPECS, DATA_DIR_NAME
-    from .audit_types import AuditEventRow
-    from .audit_utils import as_utc_iso
-except ImportError:  # pragma: no cover - support direct script execution
-    from audit_constants import CSV_HEADERS, DATASET_SPECS, DATA_DIR_NAME
-    from audit_types import AuditEventRow
-    from audit_utils import as_utc_iso
+from schema_constants import CSV_HEADERS, DATASET_SPECS, DATA_DIR_NAME
+from schema_event_types import AuditEventRow
+from shared_parsing_utils import as_utc_iso
 
 
 def _csv_value(value: Any) -> str | int:
